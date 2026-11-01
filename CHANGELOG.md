@@ -4,6 +4,9 @@ Notable changes to the site and its publishing pipeline. Newest first. Dates are
 
 ## Unreleased
 
+### Added
+- Every case study closes with a contact block: private code offers a walkthrough call, a public repo is linked, and each has a mailto titled "About <project>". The helper lives in `src/lib/contact.ts` (#103).
+
 ### Changed
 - Ongoing MTS periods read "– Present" instead of a frozen "Oct 2026": the MTS Hub, wetlabs.app and agentic-workflow case studies and the two matching home timeline rows. Finished phases and the client case studies keep their end dates. The project schema rejects a "Present" period without a start year (#93).
 - Home page GitHub cards are an allowlist: only public repositories owned by `pearsedarcy` and named on a featured or shown list appear, so a repository made public later never shows unreviewed. The site's own repository leads, then shown repositories by push day with list order on ties, capped at six; the committed snapshot is filtered the same way. The profile card shows last year's contributions instead of followers, with a note that most of the work is in private repositories. The build log names skipped repositories only outside CI (#109).

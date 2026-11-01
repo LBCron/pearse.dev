@@ -3,7 +3,8 @@ import { getCollection, render } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import PostRow from '../../components/PostRow.astro';
-import { CATEGORY_LABEL } from '../../lib/site';
+import { CATEGORY_LABEL, SITE } from '../../lib/site';
+import { contactHref, contactVariant } from '../../lib/contact';
 import { relatedPosts } from '../../lib/visibility';
 import { getVisibleProjects, getWorkSequence } from '../../lib/projects';
 import { caseNumber } from '../../lib/work-order';
@@ -34,6 +35,8 @@ const related = relatedPosts(await getCollection('posts'), d.slug);
 const hasBody = (project.body ?? '').trim().length > 0;
 const ProjectDiagram = d.diagram ? DIAGRAMS[d.diagram] : undefined;
 const hasSections = d.sections.length > 0;
+const contact = contactVariant(d);
+const mailto = contactHref(d.title, SITE.email);
 ---
 
 <Base title={d.title} description={d.oneLiner} {...og}>
@@ -179,6 +182,36 @@ const hasSections = d.sections.length > 0;
         </section>
       )
     }
+
+    {/* Closing contact block (#103): same copy on every private case study, first person, nothing
+        about customers or employers. The data attribute is a test hook only; styling is by class. */}
+    <section class="case-contact" aria-labelledby="contact-title" data-case-contact={contact}>
+      <h2 id="contact-title" class="label mb-4">
+        {
+          contact === 'private' ? (
+            <b>Want to see the code?</b>
+          ) : contact === 'repo' ? (
+            <b>Read the code</b>
+          ) : (
+            <b>Get in touch</b>
+          )
+        }
+      </h2>
+      {
+        contact === 'private' ? (
+          <p class="case-contact-text">The code is private. Happy to walk you through how it was built on a call.</p>
+        ) : contact === 'repo' ? (
+          <p class="case-contact-text">
+            The code is public: <a class="link" href={d.repo}>read it on GitHub</a>. Happy to talk it through on a call.
+          </p>
+        ) : (
+          <p class="case-contact-text">Happy to talk about how this was built. Send me a line.</p>
+        )
+      }
+      <p class="mt-4">
+        <a class="link case-contact-mail" href={mailto}>Email me about {d.title}</a>
+      </p>
+    </section>
 
     <nav class="case-nav rule" aria-label="More projects">
       {
@@ -331,6 +364,20 @@ const hasSections = d.sections.length > 0;
     font-size: min(var(--text-4xl), 100cqi / (var(--longest, 8) * 0.95));
     overflow-wrap: anywhere;
     hyphens: auto;
+  }
+  .case-contact {
+    margin-top: 5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--color-paper);
+  }
+  .case-contact-text {
+    max-width: 52ch;
+    font-size: var(--text-lg);
+    line-height: 1.5;
+  }
+  .case-contact-mail {
+    display: inline-block;
+    padding-block: 0.5rem;
   }
   .case-nav {
     display: grid;

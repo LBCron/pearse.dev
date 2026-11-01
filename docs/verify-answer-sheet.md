@@ -169,7 +169,7 @@ Marker text is quoted word for word from the source line. Delete this sheet once
 ## 21. 2027-01-26 · i-was-the-event-guy
 
 - File: `src/content/posts/i-was-the-event-guy.md`
-- Line: 39
+- Line: 36
 - Date: 2027-01-26
 - Marker: `[VERIFY: the raw essay spells it both Freerides.org and Freeride.org; which is right?]`
 - Question: Which spelling is right, Freerides.org or Freeride.org?

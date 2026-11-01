@@ -142,7 +142,7 @@ title: Post title
 description: ≤160 characters, used as the meta description.
 pubDate: 2026-11-03
 updatedDate: 2026-11-10     # optional
-tags: [django, agents]
+tags: [django, architecture]
 project: mts-hub            # optional, a project slug; links the post and the case study
 draft: false
 social:
@@ -151,6 +151,8 @@ social:
   short: "≤300 chars incl. URL, for X/Bluesky/Mastodon."
 ---
 ```
+
+`tags` is a closed list of one to three terms, validated by the schema, so an unknown tag fails the build. The vocabulary lives in `src/lib/tags.ts`; each tag maps to one of the four content pillars (Platform building (Django), Self-hosted AI in production, Agentic engineering, Career). A new tag is added there and must be carried by at least two posts (`tests/post-tags.test.mjs`).
 
 Drafts are excluded everywhere. Posts dated in the future are excluded from the HTML pages and RSS until their `pubDate`; the deploy workflow rebuilds every day at 06:00 UTC so they go live on their date. GitHub disables scheduled workflows after 60 days with no repository activity, so `.github/workflows/keepalive.yml` re-enables the deploy workflow weekly. That works only if the enable call resets GitHub's inactivity counter, which GitHub does not document; the fallback is a push to `master` at least every 60 days.
 

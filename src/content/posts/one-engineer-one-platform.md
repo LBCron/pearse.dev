@@ -2,7 +2,7 @@
 title: "One engineer, one platform: building an operations system of record with an agent team"
 description: "How I built MTS Hub, a Django system of record for a wetlab-education company, as the sole engineer: 939 commits, 6000+ tests, 22 ADRs, and an agent team."
 pubDate: 2026-11-03
-tags: [django, agentic-engineering, architecture, testing]
+tags: [django, agentic-engineering, architecture]
 project: "mts-hub"
 draft: false
 social:

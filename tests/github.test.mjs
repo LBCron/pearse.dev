@@ -4,11 +4,14 @@
 // section. The dist/ assertions rely on `npm test`'s pretest build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync, statSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
+import { parseHtml, find, srcsetCandidates } from './lib/html.mjs';
 import {
+  AVATAR_MAX_BYTES,
   DESCRIPTION_FALLBACKS,
   DESCRIPTION_OVERRIDES,
   FEATURED_REPOS,
@@ -19,6 +22,7 @@ import {
   describeRepo,
   filterSnapshot,
   loadGithub,
+  normaliseAvatar,
   profileStats,
   shapeAvatar,
   shapeCalendar,
@@ -283,10 +287,30 @@ const SNAP = shapeGithub(
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
-function fakeFetch({ rest = true, graphql = true, extraRepos = [] } = {}) {
+// A PNG avatar carrying EXIF and an ICC profile, as GitHub may serve one (issue #115).
+async function pngAvatar(color = { r: 200, g: 60, b: 60, alpha: 1 }) {
+  return sharp({ create: { width: 300, height: 220, channels: 4, background: color } })
+    .withExif({ IFD0: { Copyright: 'Someone Else', Artist: 'Not Pearse' } })
+    .withIccProfile('p3')
+    .png()
+    .toBuffer();
+}
+const PNG_A = await pngAvatar();
+const PNG_B = await pngAvatar({ r: 20, g: 90, b: 200, alpha: 1 });
+
+/**
+ * `avatar` shapes the response for the avatar host: bytes (default PNG_A), a { body, type, status }
+ * object, or 'throw'. `user` overrides fields of the profile response.
+ */
+function fakeFetch({ rest = true, graphql = true, extraRepos = [], avatar = PNG_A, user = {} } = {}) {
   const calls = [];
   const f = async (url, init = {}) => {
     calls.push({ url, auth: init.headers?.Authorization });
+    if (new URL(url).hostname === 'avatars.githubusercontent.com') {
+      if (avatar === 'throw') throw new TypeError('avatar fetch failed');
+      const a = avatar instanceof Uint8Array ? { body: avatar } : avatar;
+      return new Response(a.body, { status: a.status ?? 200, headers: { 'content-type': a.type ?? 'image/png' } });
+    }
     if (!rest) throw new TypeError('fetch failed');
     if (url.endsWith('/graphql')) {
       if (!graphql) return json({ message: 'Bad credentials' }, 401);
@@ -295,7 +319,7 @@ function fakeFetch({ rest = true, graphql = true, extraRepos = [] } = {}) {
     if (url.includes('/repos')) {
       return json([repo('my-blog', '2026-10-01'), repo('django-store', '2026-10-02', { private: true }), ...extraRepos]);
     }
-    return json(USER);
+    return json({ ...USER, ...user });
   };
   return { f, calls };
 }
@@ -309,7 +333,7 @@ test('loadGithub: no network falls back to the snapshot and warns', async () => 
   const { dir, path } = tmpSnapshot(SNAP);
   const q = quiet();
   try {
-    const r = await loadGithub({ snapshotPath: path, token: 't', fetch: fakeFetch({ rest: false }).f, ...q });
+    const r = await loadGithub({ snapshotPath: path, avatarPath: join(dir, 'avatar.jpg'), token: 't', fetch: fakeFetch({ rest: false }).f, ...q });
     assert.equal(r.source, 'snapshot');
     assert.deepEqual(r.view, SNAP);
     assert.match(q.lines.join('\n'), /^warn using snapshot from 2026-01-01: network: fetch failed$/m);
@@ -323,7 +347,7 @@ test('loadGithub: offline skips the network entirely', async () => {
   const { dir, path } = tmpSnapshot(SNAP);
   const { f, calls } = fakeFetch();
   try {
-    const r = await loadGithub({ snapshotPath: path, offline: true, fetch: f, ...quiet() });
+    const r = await loadGithub({ snapshotPath: path, avatarPath: join(dir, 'avatar.jpg'), offline: true, fetch: f, ...quiet() });
     assert.equal(r.source, 'snapshot');
     assert.equal(calls.length, 0);
   } finally {
@@ -336,14 +360,16 @@ test('loadGithub: live fetch with a token shapes everything and writes the snaps
   const { f, calls } = fakeFetch();
   const q = quiet();
   try {
-    const r = await loadGithub({ snapshotPath: path, token: 'tok', fetch: f, now: new Date('2026-10-28T00:00:00Z'), ...q });
+    const r = await loadGithub({ snapshotPath: path, avatarPath: join(dir, 'avatar.jpg'), token: 'tok', fetch: f, now: new Date('2026-10-28T00:00:00Z'), ...q });
     assert.equal(r.source, 'live');
     assert.deepEqual(
       r.view.repos.map((x) => x.name),
       ['my-blog'],
     );
     assert.equal(r.view.calendar.total, 99);
-    assert.ok(calls.every((c) => c.auth === 'Bearer tok'));
+    const api = calls.filter((c) => c.url.startsWith('https://api.github.com/'));
+    assert.ok(api.length >= 3 && api.every((c) => c.auth === 'Bearer tok'));
+    assert.ok(calls.filter((c) => !api.includes(c)).every((c) => c.auth === undefined), 'the token never goes to the avatar host');
     assert.deepEqual(JSON.parse(readFileSync(path, 'utf8')), r.view);
     assert.match(q.lines.join('\n'), /^log live: 1 repos, 99 contributions$/m);
   } finally {
@@ -356,7 +382,7 @@ test('loadGithub: without a token the calendar comes from the snapshot', async (
   const { f, calls } = fakeFetch();
   const q = quiet();
   try {
-    const r = await loadGithub({ snapshotPath: path, fetch: f, ...q });
+    const r = await loadGithub({ snapshotPath: path, avatarPath: join(dir, 'avatar.jpg'), fetch: f, ...q });
     assert.equal(r.source, 'partial');
     assert.equal(r.view.repos[0].name, 'my-blog');
     assert.deepEqual(r.view.calendar, SNAP.calendar);
@@ -371,7 +397,7 @@ test('loadGithub: without a token the calendar comes from the snapshot', async (
 test('loadGithub: a failing GraphQL call keeps the snapshot calendar', async () => {
   const { dir, path } = tmpSnapshot(SNAP);
   try {
-    const r = await loadGithub({ snapshotPath: path, token: 'bad', fetch: fakeFetch({ graphql: false }).f, ...quiet() });
+    const r = await loadGithub({ snapshotPath: path, avatarPath: join(dir, 'avatar.jpg'), token: 'bad', fetch: fakeFetch({ graphql: false }).f, ...quiet() });
     assert.equal(r.source, 'partial');
     assert.match(r.reason, /HTTP 401/);
     assert.deepEqual(r.view.calendar, SNAP.calendar);
@@ -383,7 +409,7 @@ test('loadGithub: a failing GraphQL call keeps the snapshot calendar', async () 
 test('loadGithub: no network and no snapshot is a hard error', async () => {
   const { dir, path } = tmpSnapshot(null);
   try {
-    await assert.rejects(loadGithub({ snapshotPath: path, fetch: fakeFetch({ rest: false }).f, ...quiet() }), /no snapshot/);
+    await assert.rejects(loadGithub({ snapshotPath: path, avatarPath: join(dir, 'avatar.jpg'), fetch: fakeFetch({ rest: false }).f, ...quiet() }), /no snapshot/);
     assert.equal(existsSync(path), false);
   } finally {
     rmSync(dir, { recursive: true });
@@ -397,7 +423,7 @@ test('loadGithub logs skipped repos by name locally and only the count in CI (is
     const q = quiet();
     try {
       const f = fakeFetch({ extraRepos: [repo('unlisted-thing', '2026-10-03')] }).f;
-      const r = await loadGithub({ snapshotPath: path, token: 't', fetch: f, ...q });
+      const r = await loadGithub({ snapshotPath: path, avatarPath: join(dir, 'avatar.jpg'), token: 't', fetch: f, ...q });
       assert.deepEqual(
         r.view.repos.map((x) => x.name),
         ['my-blog'],
@@ -420,6 +446,165 @@ test('loadGithub logs skipped repos by name locally and only the count in CI (is
     if (saved === undefined) delete process.env.CI;
     else process.env.CI = saved;
   }
+});
+
+// ---- avatar refresh (issue #115) -------------------------------------------
+
+const AVATAR_URL = 'https://avatars.githubusercontent.com/u/1?v=4&s=160';
+const avatarSetup = (view = SNAP) => {
+  const t = tmpSnapshot(view);
+  return { ...t, avatarPath: join(t.dir, 'avatar.jpg') };
+};
+const avatarWarnings = (q) => q.lines.filter((l) => l.startsWith('warn') && /avatar/.test(l));
+
+test('normaliseAvatar turns a PNG with EXIF and an ICC profile into a bare 160x160 JPEG', async () => {
+  const before = await sharp(PNG_A).metadata();
+  assert.ok(before.exif && before.icc, 'the fixture really carries metadata');
+  assert.equal(before.format, 'png');
+  const out = await normaliseAvatar(PNG_A);
+  assert.deepEqual([...out.subarray(0, 3)], [0xff, 0xd8, 0xff], 'JPEG SOI marker');
+  const m = await sharp(out).metadata();
+  assert.equal(m.format, 'jpeg');
+  assert.equal(m.width, 160);
+  assert.equal(m.height, 160);
+  assert.equal(m.exif, undefined);
+  assert.equal(m.icc, undefined);
+  assert.equal(m.xmp, undefined);
+  assert.ok(!out.includes('Someone Else') && !out.includes('Not Pearse'), 'no EXIF text in the bytes');
+  assert.deepEqual(await normaliseAvatar(PNG_A), out, 'deterministic');
+});
+
+test('loadGithub writes a normalised JPEG avatar from a live fetch', async () => {
+  const { dir, path, avatarPath } = avatarSetup();
+  const q = quiet();
+  try {
+    await loadGithub({ snapshotPath: path, avatarPath, token: 't', fetch: fakeFetch().f, ...q });
+    const bytes = readFileSync(avatarPath);
+    assert.deepEqual([...bytes.subarray(0, 3)], [0xff, 0xd8, 0xff]);
+    const m = await sharp(bytes).metadata();
+    assert.deepEqual([m.format, m.width, m.height, m.exif, m.icc], ['jpeg', 160, 160, undefined, undefined]);
+    assert.ok(bytes.length <= 6144, `${bytes.length} bytes`);
+    assert.deepEqual(avatarWarnings(q), []);
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
+});
+
+test('loadGithub rewrites the avatar only when the normalised bytes change', async () => {
+  const { dir, path, avatarPath } = avatarSetup();
+  try {
+    const run = (avatar) => loadGithub({ snapshotPath: path, avatarPath, token: 't', fetch: fakeFetch({ avatar }).f, ...quiet() });
+    await run(PNG_A);
+    const first = readFileSync(avatarPath);
+    const past = new Date('2020-01-01T00:00:00Z');
+    utimesSync(avatarPath, past, past);
+
+    await run(PNG_A);
+    assert.equal(statSync(avatarPath).mtimeMs, past.getTime(), 'identical upstream bytes: not rewritten');
+    assert.deepEqual(readFileSync(avatarPath), first);
+
+    // The same picture re-encoded differently upstream normalises to the same bytes: still no rewrite.
+    const asWebp = await sharp(PNG_A).webp({ lossless: true }).toBuffer();
+    await run({ body: asWebp, type: 'image/webp' });
+    assert.equal(statSync(avatarPath).mtimeMs, past.getTime(), 'compare runs on normalised bytes');
+
+    await run(PNG_B);
+    assert.notEqual(statSync(avatarPath).mtimeMs, past.getTime(), 'different upstream bytes: rewritten');
+    assert.notDeepEqual(readFileSync(avatarPath), first);
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
+});
+
+test('the committed avatar is the source of truth: offline and failed fetches leave it alone', async () => {
+  const { dir, path, avatarPath } = avatarSetup();
+  try {
+    writeFileSync(avatarPath, await normaliseAvatar(PNG_A));
+    const committed = readFileSync(avatarPath);
+
+    // offline: no network request at all, one warning
+    const calls = [];
+    const noNetwork = async (url) => {
+      calls.push(url);
+      throw new Error('no network call expected');
+    };
+    const off = quiet();
+    await loadGithub({ snapshotPath: path, avatarPath, offline: true, fetch: noNetwork, ...off });
+    assert.deepEqual(calls, []);
+    assert.deepEqual(readFileSync(avatarPath), committed);
+    assert.equal(off.lines.filter((l) => l.startsWith('warn')).length, 1);
+
+    // the avatar request throws
+    const thrown = quiet();
+    await loadGithub({ snapshotPath: path, avatarPath, token: 't', fetch: fakeFetch({ avatar: 'throw' }).f, ...thrown });
+    assert.deepEqual(readFileSync(avatarPath), committed);
+    assert.equal(avatarWarnings(thrown).length, 1);
+    assert.match(avatarWarnings(thrown)[0], /^warn avatar kept as committed: avatar fetch failed$/);
+
+    // the REST calls fail too: snapshot fallback, no avatar request, file untouched
+    const down = quiet();
+    await loadGithub({ snapshotPath: path, avatarPath, token: 't', fetch: fakeFetch({ rest: false, avatar: 'throw' }).f, ...down });
+    assert.deepEqual(readFileSync(avatarPath), committed);
+
+    // an undecodable image body
+    const garbage = quiet();
+    await loadGithub({ snapshotPath: path, avatarPath, token: 't', fetch: fakeFetch({ avatar: new TextEncoder().encode('not an image') }).f, ...garbage });
+    assert.deepEqual(readFileSync(avatarPath), committed);
+    assert.equal(avatarWarnings(garbage).length, 1);
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
+});
+
+test('avatar guards: wrong host, wrong content type and an oversized body leave the file untouched', async () => {
+  const { dir, path, avatarPath } = avatarSetup();
+  try {
+    writeFileSync(avatarPath, await normaliseAvatar(PNG_A));
+    const committed = readFileSync(avatarPath);
+
+    // a profile whose avatar is not on the avatar host never triggers a request to it
+    const host = fakeFetch({ user: { avatar_url: 'https://evil.example/u/1.png' } });
+    const q1 = quiet();
+    await loadGithub({ snapshotPath: path, avatarPath, token: 't', fetch: host.f, ...q1 });
+    assert.deepEqual(readFileSync(avatarPath), committed);
+    assert.ok(!host.calls.some((c) => !c.url.startsWith('https://api.github.com/')), 'no request beyond the API');
+    assert.equal(avatarWarnings(q1).length, 1);
+
+    // http on the right host is refused as well
+    const plain = fakeFetch({ user: { avatar_url: 'http://avatars.githubusercontent.com/u/1' } });
+    await loadGithub({ snapshotPath: path, avatarPath, token: 't', fetch: plain.f, ...quiet() });
+    assert.deepEqual(readFileSync(avatarPath), committed);
+    assert.ok(!plain.calls.some((c) => c.url.includes('avatars.githubusercontent.com')));
+
+    // content type
+    const q2 = quiet();
+    await loadGithub({ snapshotPath: path, avatarPath, token: 't', fetch: fakeFetch({ avatar: { body: PNG_B, type: 'text/html' } }).f, ...q2 });
+    assert.deepEqual(readFileSync(avatarPath), committed);
+    assert.match(avatarWarnings(q2).join('\n'), /not image\/\*/);
+
+    // size cap (a real, decodable image padded past the cap; the stream is cut off at the cap)
+    const big = Buffer.concat([PNG_B, Buffer.alloc(AVATAR_MAX_BYTES)]);
+    const q3 = quiet();
+    await loadGithub({ snapshotPath: path, avatarPath, token: 't', fetch: fakeFetch({ avatar: big }).f, ...q3 });
+    assert.deepEqual(readFileSync(avatarPath), committed);
+    assert.match(avatarWarnings(q3).join('\n'), /exceeds/);
+
+    // HTTP error
+    const q4 = quiet();
+    await loadGithub({ snapshotPath: path, avatarPath, token: 't', fetch: fakeFetch({ avatar: { body: 'nope', status: 404 } }).f, ...q4 });
+    assert.deepEqual(readFileSync(avatarPath), committed);
+    assert.equal(avatarWarnings(q4).length, 1);
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
+});
+
+test('the committed avatar is a bare 160x160 JPEG within the size budget', async () => {
+  const bytes = readFileSync('src/assets/github-avatar.jpg');
+  assert.deepEqual([...bytes.subarray(0, 3)], [0xff, 0xd8, 0xff]);
+  const m = await sharp(bytes).metadata();
+  assert.deepEqual([m.format, m.width, m.height, m.exif, m.icc, m.xmp], ['jpeg', 160, 160, undefined, undefined, undefined]);
+  assert.ok(bytes.length <= 6144, `${bytes.length} bytes`);
 });
 
 // ---- committed snapshot and build ------------------------------------------
@@ -575,7 +760,7 @@ test('loadGithub applies the site copy to an older snapshot as well', async () =
   };
   const { dir, path } = tmpSnapshot(stale);
   try {
-    const r = await loadGithub({ snapshotPath: path, offline: true, ...quiet() });
+    const r = await loadGithub({ snapshotPath: path, avatarPath: join(dir, 'avatar.jpg'), offline: true, ...quiet() });
     assert.equal(r.view.name, 'Pearse D’Arcy');
     assert.equal(r.view.bio, PROFILE_BIO);
     assert.equal(r.view.repos[0].description, DESCRIPTION_OVERRIDES['django-store']);
@@ -595,4 +780,59 @@ test('home page GitHub card uses the site wording and edited descriptions (issue
   const descs = [...section.matchAll(/class="gh-repo-desc"[^>]*>([^<]+)</g)].map((m) => m[1]);
   assert.equal(descs.length, 6);
   for (const d of descs) assert.match(d, /^[A-Z].*\.$/, d);
+});
+
+// ---- self-hosted avatar markup (issue #115) --------------------------------
+
+function avatarMarkup() {
+  const root = parseHtml(readFileSync('dist/index.html', 'utf8'));
+  const [card] = find(root, (e) => (e.attrs.class ?? '').split(/\s+/).includes('gh-profile'));
+  assert.ok(card, 'GitHub profile card');
+  const pictures = find(card, (e) => e.tag === 'picture');
+  assert.equal(pictures.length, 1, 'one <picture> in the card');
+  return pictures[0];
+}
+const widths = (srcset) => srcsetCandidates(srcset).map((c) => c.descriptor).sort();
+
+test('the GitHub card renders the avatar as a <picture> with AVIF and WebP sources and a JPEG fallback', () => {
+  const picture = avatarMarkup();
+  const sources = find(picture, (e) => e.tag === 'source');
+  const byType = Object.fromEntries(sources.map((s) => [s.attrs.type, s]));
+  assert.deepEqual(Object.keys(byType).sort(), ['image/avif', 'image/webp']);
+  for (const s of sources) {
+    assert.deepEqual(widths(s.attrs.srcset), ['160w', '80w'], s.attrs.type);
+    assert.equal(s.attrs.sizes, '80px');
+  }
+  const [img] = find(picture, (e) => e.tag === 'img');
+  assert.match(img.attrs.src, /^\/_astro\/[^/]+\.jpe?g$/);
+  assert.deepEqual(widths(img.attrs.srcset), ['160w', '80w']);
+  assert.equal(img.attrs.width, '80');
+  assert.equal(img.attrs.height, '80');
+  assert.equal(img.attrs.alt, '', 'decorative');
+  assert.equal(img.attrs.loading, 'lazy');
+  assert.equal(img.attrs.decoding, 'async');
+  assert.match(img.attrs.class, /\bgh-avatar\b/);
+  for (const u of srcsetCandidates(img.attrs.srcset)) assert.match(u.url, /^\/_astro\/[^/]+\.jpe?g$/);
+});
+
+test('every avatar variant the card references is a file in dist/ of at most 6144 bytes', () => {
+  const picture = avatarMarkup();
+  const urls = new Set();
+  for (const e of find(picture, (x) => x.tag === 'source' || x.tag === 'img')) {
+    if (e.attrs.src) urls.add(e.attrs.src);
+    for (const c of srcsetCandidates(e.attrs.srcset ?? '')) urls.add(c.url);
+  }
+  assert.equal(urls.size, 6, '2 widths x 3 formats');
+  for (const u of urls) {
+    assert.ok(u.startsWith('/'), u);
+    const file = join('dist', u);
+    assert.ok(existsSync(file), `${u} exists in dist/`);
+    assert.ok(statSync(file).size <= 6144, `${u} is ${statSync(file).size} bytes`);
+  }
+});
+
+test('the snapshot keeps avatarUrl as the refresh source, but no page renders it', () => {
+  const v = JSON.parse(readFileSync('src/data/github.json', 'utf8'));
+  assert.match(v.avatarUrl, /^https:\/\/avatars\.githubusercontent\.com\//);
+  assert.ok(!readFileSync('dist/index.html', 'utf8').includes(v.avatarUrl));
 });

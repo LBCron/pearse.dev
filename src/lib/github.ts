@@ -5,11 +5,13 @@
  * when a token is present, the last year's contribution calendar (GraphQL), and shapes
  * them into a small view model. A shaped snapshot is committed at src/data/github.json:
  * when the network or the token is unavailable the build uses it and logs a warning, and
- * every successful fetch rewrites it. Only `node:` imports, no `astro:*`, so node:test
+ * every successful fetch rewrites it. A live fetch also refreshes the committed avatar at
+ * AVATAR_PATH (issue #115). Only `node:` imports plus sharp, no `astro:*`, so node:test
  * loads this file with type stripping (tests/github.test.mjs).
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import sharp from 'sharp';
 
 export const GITHUB_LOGIN = 'pearsedarcy';
 export const REPO_COUNT = 6;
@@ -53,6 +55,18 @@ export const DESCRIPTION_OVERRIDES: Readonly<Record<string, string>> = {
 /** The profile card's bio, in the site's wording rather than GitHub's (issue #78). */
 export const PROFILE_BIO = 'Software engineer in Innsbruck.';
 export const SNAPSHOT_PATH = 'src/data/github.json';
+/**
+ * The self-hosted avatar (issue #115). The committed file is the source of truth and the card
+ * renders it through astro:assets; a live build only refreshes it for the next build, because
+ * Astro resolves the static import before any page frontmatter calls getGithub().
+ */
+export const AVATAR_PATH = 'src/assets/github-avatar.jpg';
+/** Largest avatar download accepted, in bytes. */
+export const AVATAR_MAX_BYTES = 256 * 1024;
+/** Edge of the committed square avatar: 80px card at 2x. */
+export const AVATAR_SIZE = 160;
+/** Fixed so the encode is deterministic; low enough that the 160px variants stay under 6 KB. */
+export const AVATAR_JPEG_QUALITY = 60;
 /** Under the profile stats: says where the work lives, not what the numbers include. */
 export const PROFILE_STATS_CAPTION = 'Most of my work is in private repositories.';
 
@@ -95,7 +109,7 @@ export interface GithubView {
   name: string;
   /** Always https://github.com/<login>. */
   url: string;
-  /** avatars.githubusercontent.com URL sized for the card, or null. */
+  /** avatars.githubusercontent.com URL: the refresh source for the committed avatar, never rendered. */
   avatarUrl: string | null;
   bio: string | null;
   publicRepos: number;
@@ -322,6 +336,8 @@ export interface LoadOptions {
   /** Skip the network entirely. */
   offline?: boolean;
   snapshotPath?: string;
+  /** Where the refreshed avatar is written; tests inject a temp path. */
+  avatarPath?: string;
   fetch?: typeof fetch;
   log?: (msg: string) => void;
   warn?: (msg: string) => void;
@@ -340,6 +356,77 @@ export function readSnapshot(path: string): GithubView | null {
 }
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+// ---------------------------------------------------------------------------
+// Avatar refresh (issue #115)
+// ---------------------------------------------------------------------------
+
+/**
+ * Decode, apply EXIF orientation, resize to a 160x160 cover square and encode as a
+ * non-progressive JPEG at a fixed quality. sharp drops all metadata (EXIF, ICC, XMP) unless
+ * asked to keep it, so none of GitHub's metadata reaches the repo. Alpha is flattened onto
+ * white because JPEG has none. Deterministic for a given sharp version.
+ */
+export async function normaliseAvatar(bytes: Uint8Array): Promise<Buffer> {
+  return sharp(bytes, { limitInputPixels: 16_000_000 })
+    .rotate()
+    .flatten({ background: '#ffffff' })
+    .resize(AVATAR_SIZE, AVATAR_SIZE, { fit: 'cover' })
+    .jpeg({ quality: AVATAR_JPEG_QUALITY, progressive: false, chromaSubsampling: '4:2:0' })
+    .toBuffer();
+}
+
+/** Reads a body up to `max` bytes; throws once it would exceed that. */
+async function readCapped(res: Response, max: number): Promise<Uint8Array> {
+  const declared = Number(res.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > max) throw new Error(`body of ${declared} bytes exceeds ${max}`);
+  if (!res.body) throw new Error('no response body');
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > max) {
+      await reader.cancel();
+      throw new Error(`body exceeds ${max} bytes`);
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
+}
+
+/**
+ * Downloads `avatarUrl`, normalises it and writes `path` only when the normalised bytes differ
+ * from what is there. Guards: https on the avatar host, an image/* content type and a size cap.
+ * Any failure leaves the file untouched and logs one warning; it never throws.
+ */
+export async function refreshAvatar(
+  avatarUrl: string | null,
+  path: string,
+  doFetch: typeof fetch,
+  io: { log: (m: string) => void; warn: (m: string) => void; timeoutMs: number },
+): Promise<'written' | 'unchanged' | 'kept'> {
+  try {
+    const u = avatarUrl ? new URL(avatarUrl) : null;
+    if (!u || u.protocol !== 'https:' || u.hostname !== AVATAR_HOST) throw new Error('not an https URL on the avatar host');
+    const res = await doFetch(u.toString(), { redirect: 'error', signal: AbortSignal.timeout(io.timeoutMs) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (res.url && new URL(res.url).hostname !== AVATAR_HOST) throw new Error('response came from another host');
+    const type = res.headers.get('content-type') ?? '';
+    if (!/^image\//i.test(type)) throw new Error(`content-type ${type || '(none)'} is not image/*`);
+    const next = await normaliseAvatar(await readCapped(res, AVATAR_MAX_BYTES));
+    if (existsSync(path) && readFileSync(path).equals(next)) return 'unchanged';
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, next);
+    io.log(`avatar written to ${path} (renders from the next build)`);
+    return 'written';
+  } catch (e) {
+    io.warn(`avatar kept as committed: ${errText(e)}`);
+    return 'kept';
+  }
+}
 
 export async function loadGithub(opts: LoadOptions = {}): Promise<LoadResult> {
   const login = opts.login ?? GITHUB_LOGIN;
@@ -431,6 +518,8 @@ export async function loadGithub(opts: LoadOptions = {}): Promise<LoadResult> {
   } catch (e) {
     warn(`could not write snapshot: ${errText(e)}`);
   }
+
+  await refreshAvatar(view.avatarUrl, resolve(opts.avatarPath ?? AVATAR_PATH), doFetch, { log, warn, timeoutMs });
 
   return { view, source, reason };
 }

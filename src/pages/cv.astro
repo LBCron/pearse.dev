@@ -113,7 +113,7 @@ const next = () => String(++n).padStart(2, '0');
               <p class="cv-period">{start(p.data.period)}</p>
               <div>
                 <h3 class="cv-title">
-                  <a class="link" href={`/work/${p.data.slug}/`} data-print-url={bare(absoluteUrl(`/work/${p.data.slug}/`))}>
+                  <a class="link inline-block py-0.5 -my-0.5" href={`/work/${p.data.slug}/`} data-print-url={bare(absoluteUrl(`/work/${p.data.slug}/`))}>
                     {p.data.title}
                   </a>
                 </h3>

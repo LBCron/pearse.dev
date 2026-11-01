@@ -125,3 +125,40 @@ test('the RSS link in the /writing/ label is a layout-neutral py-2 target (#198)
   assert.equal(links[0].match(/href="([^"]*)"/)?.[1], '/rss.xml');
   assertNeutralTarget(links[0], 'writing label RSS', '2');
 });
+
+// #205: the three groups #190 and #198 missed. Same layout-neutral idea, sized to each context.
+test('the home timeline "Skatedownhills" link is a layout-neutral py-1 target (#205)', () => {
+  const html = read('dist/index.html');
+  const rows = sections(html, '<ol class="timeline"', '</ol>');
+  assert.equal(rows.length, 1, 'one timeline');
+  const links = anchors(rows[0]);
+  assert.equal(links.length, 1, 'one link in the timeline');
+  assert.equal(links[0].match(/href="([^"]*)"/)?.[1], '/work/skatedownhills/');
+  assertNeutralTarget(links[0], 'timeline', '1');
+  assert.match(html, /\.py-1\{padding-block:var\(--spacing\)\}/, 'py-1 rule');
+  assert.match(html, /\.-my-1\{margin-block:calc\(var\(--spacing\) \* -1\)\}/, '-my-1 rule');
+});
+
+test('the /cv/ project links are layout-neutral py-0.5 targets (#205)', () => {
+  const html = read('dist/cv/index.html');
+  const links = anchors(section(html, '<ul class="cv-work"', '</ul>'));
+  const texts = [...section(html, '<ul class="cv-work"', '</ul>').matchAll(/<a\b[^>]*>\s*([^<]*?)\s*<\/a>/g)].map((m) => m[1]);
+  for (const name of ['MTS Hub', 'wetlabs.app', 'East Coast Blinds', 'Dublin Plein Air']) {
+    assert.ok(texts.includes(name), `${name} is a project link`);
+  }
+  assert.ok(links.length >= 4, `${links.length} project links`);
+  for (const a of links) assertNeutralTarget(a, 'cv projects', '0.5');
+});
+
+test('the footer CV link is padded to 24px wide with a matching negative margin (#205)', () => {
+  for (const f of PAGES) {
+    const html = read(f);
+    const cv = anchors(section(html, '<footer', '</footer>')).filter((a) => /href="\/cv\/"/.test(a));
+    assert.equal(cv.length, 1, `${f}: one footer CV link`);
+    const cls = classOf(cv[0]).split(/\s+/);
+    for (const c of ['inline-block', 'px-1', '-mx-1', 'py-2']) assert.ok(cls.includes(c), `${f}: ${c}: ${cv[0]}`);
+  }
+  const html = read('dist/index.html');
+  assert.match(html, /\.px-1\{padding-inline:var\(--spacing\)\}/, 'px-1 rule');
+  assert.match(html, /\.-mx-1\{margin-inline:calc\(var\(--spacing\) \* -1\)\}/, '-mx-1 rule');
+});

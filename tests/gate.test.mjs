@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const gate = resolve('scripts/gate.mjs');
 
@@ -175,4 +176,144 @@ test('PDF: a clean PDF passes, and its text really is read', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// The tracked example denylist (.confidential-patterns.example). Every case below runs the real
+// gate; none reads or writes the repo-root `.confidential-patterns`. Fallback cases use mkdtemp
+// fixtures, and the repo-root case overrides the file through the env var.
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
+const EXAMPLE = readFileSync(join(ROOT, '.confidential-patterns.example'), 'utf8');
+const PLAIN_PATTERN = 'vrelk[a]nthum';
+const PLAIN_TOKEN = 'vrelkanthum';
+const ANCHORED_PATTERN = '^snorv[e]lt-quill$';
+const ANCHORED_TOKEN = 'snorvelt-quill';
+const INVALID_LINE = '(unclosed[group';
+
+const git = (...args) => spawnSync('git', args, { cwd: ROOT, encoding: 'utf8' });
+
+/** A fixture whose `.confidential-patterns` holds `fileText` and whose index.html holds `html`. */
+function fileFixture(fileText, html) {
+  const dir = mkdtempSync(join(tmpdir(), 'gate-'));
+  mkdirSync(join(dir, 'dist'));
+  writeFileSync(join(dir, 'dist', 'index.html'), html);
+  writeFileSync(join(dir, '.confidential-patterns'), fileText);
+  return dir;
+}
+
+function assertFallbackHit(r) {
+  assert.equal(r.status, 1, r.stdout + r.stderr);
+  assert.match(r.stdout, /dist[\\/]index\.html: pattern #1/);
+  assert.doesNotMatch((r.stdout + r.stderr).toLowerCase(), new RegExp(PLAIN_TOKEN));
+}
+
+test('example: is tracked, its sibling real file is not, and the ignore rule spares it', () => {
+  assert.equal(git('ls-files', '.confidential-patterns.example').stdout.trim(), '.confidential-patterns.example');
+  assert.equal(git('ls-files', '.confidential-patterns').stdout.trim(), '');
+  assert.equal(git('check-ignore', '-q', '.confidential-patterns.example').status, 1, 'the example is ignored');
+});
+
+test('example: holds the documented patterns and keeps the invalid one commented out', () => {
+  const active = EXAMPLE.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+  assert.deepEqual(active, [PLAIN_PATTERN, ANCHORED_PATTERN]);
+  assert.ok(EXAMPLE.split(/\r?\n/).includes(`# ${INVALID_LINE}`), 'invalid example is not a commented line');
+  // Each pattern uses the character-class trick: it does not match its own source text.
+  for (const p of active) assert.ok(!new RegExp(p, 'im').test(p), `${p} matches itself`);
+});
+
+test('README names the example and starts a local file without overwriting one', () => {
+  const readme = readFileSync(join(ROOT, 'README.md'), 'utf8');
+  assert.match(readme, /cp -n \.confidential-patterns\.example \.confidential-patterns/);
+});
+
+test('fallback: env unset reads .confidential-patterns', () => {
+  const dir = fileFixture(EXAMPLE, `<p>x ${PLAIN_TOKEN} y</p>`);
+  try {
+    assertFallbackHit(run(dir));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('fallback: a whitespace-only env also reads .confidential-patterns', () => {
+  const dir = fileFixture(EXAMPLE, `<p>x ${PLAIN_TOKEN} y</p>`);
+  try {
+    assertFallbackHit(run(dir, '  \n\t '));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('fallback: env unset and no file still warns and passes', () => {
+  const dir = fixture();
+  try {
+    const r = run(dir);
+    assert.equal(r.status, 0);
+    assert.match(r.stdout, /NO PATTERNS CONFIGURED/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('precedence: a non-blank env wins over .confidential-patterns', () => {
+  const dir = fileFixture(EXAMPLE, `<p>x ${PLAIN_TOKEN} y</p>`);
+  try {
+    const r = run(dir, 'nothingmatchesthis');
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+    assert.doesNotMatch(r.stdout, /pattern #/);
+    assert.match(r.stdout, /ok \(1 patterns/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('anchored hit reports its index among active patterns, not its file line', () => {
+  const file = `# header\n\n# note\nnothingmatchesone\n\n# more\nnothingmatchestwo\n# end\n${ANCHORED_PATTERN}\n`;
+  const fileLine = file.split('\n').indexOf(ANCHORED_PATTERN) + 1;
+  assert.notEqual(fileLine, 3);
+  const dir = fileFixture(file, '<p>clean</p>');
+  try {
+    writeFileSync(join(dir, 'dist', 'x.txt'), `first\n${ANCHORED_TOKEN}\nlast`);
+    const r = run(dir);
+    assert.equal(r.status, 1, r.stdout + r.stderr);
+    assert.match(r.stdout, /dist[\\/]x\.txt: pattern #3\b/);
+    assert.doesNotMatch(r.stdout, new RegExp(`pattern #${fileLine}\\b`));
+    assert.doesNotMatch(r.stdout.toLowerCase(), new RegExp(ANCHORED_TOKEN));
+    // Anchored means the whole line: the token inside a longer line does not hit.
+    writeFileSync(join(dir, 'dist', 'x.txt'), `first\nsay ${ANCHORED_TOKEN} twice\nlast`);
+    assert.equal(run(dir).status, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('invalid regex: the uncommented example line fails and is not printed', () => {
+  const marked = EXAMPLE.replace(`# ${INVALID_LINE}`, INVALID_LINE);
+  assert.notEqual(marked, EXAMPLE);
+  const dir = fileFixture(marked, '<p>clean</p>');
+  try {
+    const r = run(dir);
+    assert.equal(r.status, 1, r.stdout + r.stderr);
+    assert.match(r.stdout, /pattern #3: invalid regular expression/);
+    assert.doesNotMatch(r.stdout + r.stderr, /unclosed/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('no self-match: the example text inside dist/ passes with the example as the pattern file', () => {
+  const dir = fileFixture(EXAMPLE, EXAMPLE);
+  try {
+    const r = run(dir);
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+    assert.match(r.stdout, /ok \(2 patterns, no hits\)/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('no false positives: the example finds nothing in the real dist/, src/ and docs/', () => {
+  // cwd is the repo root; the env var overrides the local file, which is never read or written.
+  const r = run(ROOT, EXAMPLE);
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /ok \(2 patterns, no hits\)/);
 });

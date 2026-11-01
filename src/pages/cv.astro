@@ -49,7 +49,7 @@ const next = () => String(++n).padStart(2, '0');
       </div>
       <div class="cv-aside">
         <ul class="cv-contact" aria-label="Contact">
-          {contacts.map((c) => <li><a class="link" href={c.href}>{c.text}</a></li>)}
+          {contacts.map((c) => <li><a class="link inline-block py-0.5 -my-0.5" href={c.href}>{c.text}</a></li>)}
           <li class="text-steel">{SITE.location}</li>
         </ul>
         {/* The link is plain HTML; scripts/cv-pdf.mjs removes it from dist/ when no PDF was built. */}

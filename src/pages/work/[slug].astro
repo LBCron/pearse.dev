@@ -64,7 +64,7 @@ const mailto = contactHref(d.title, SITE.email);
               d.visibility === 'private' ? (
                 <span>Private repository</span>
               ) : d.repo ? (
-                <a class="link" href={d.repo}>GitHub</a>
+                <a class="link inline-block py-2 -my-2" href={d.repo}>GitHub</a>
               ) : (
                 <span>Public</span>
               )
@@ -72,7 +72,7 @@ const mailto = contactHref(d.title, SITE.email);
             {d.live && (
               <>
                 <span aria-hidden="true"> / </span>
-                <a class="link" href={d.live}>Live</a>
+                <a class="link inline-block py-2 -my-2" href={d.live}>Live</a>
               </>
             )}
           </dd>

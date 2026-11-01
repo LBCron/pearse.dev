@@ -25,6 +25,12 @@ Notable changes to the site and its publishing pipeline. Newest first. Dates are
 ### Fixed
 - Primary nav no longer clips Contact at 320 px: the header row wraps, so the nav drops under the logo when they do not fit. Header and footer links, and the logo, are 32 px tall tap targets (WCAG 1.4.10, 2.5.8) (#105).
 
+## 2026-11-01: bio and LinkedIn copy match the site
+
+### Changed
+- `docs/profile` tells the same history as the site: the 100- and 300-word bios and the LinkedIn About gain the downhill skateboarding arc and Skatedownhills (the bios stay exactly 100 and 300 words; the About is 2,121 characters), and say "two earlier tools" where they said three. The LinkedIn Experience mapping table is rewritten from the nine timeline rows, with the three pre-software rows marked "— (before software)". `/cv/` gains a first experience entry, Freelance Software Engineer, Self-employed, Aug 2026 – Present, with no location and no client named (#118).
+- `tests/bio.test.mjs` checks the bio word counts, the LinkedIn character counts, the arc and "two earlier tools" in the copy, the timeline row count against the mapping table and sentence, the position count, and the `/cv/` experience and education periods, so the copy cannot drift from the site again (#118).
+
 ## 2026-11-01: hero frame cap, idle pause and touch fix
 
 ### Changed

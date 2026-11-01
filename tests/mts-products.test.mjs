@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readPdf, scanStrings } from '../scripts/pdf-text.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 process.chdir(ROOT);
@@ -88,6 +89,12 @@ test('the old product name appears nowhere in dist/, in any case, except as one 
     if (BINARY.has(extname(file))) continue;
     assert.doesNotMatch(readFileSync(file, 'utf8'), OLD_NAME, file);
   }
+});
+
+// The CV PDF is binary, so the walk above skips it; its text, metadata and links are read instead.
+const CV_PDF = 'dist/pearse-darcy-cv.pdf';
+test('the CV PDF never uses the old product name', { skip: !existsSync(CV_PDF) && 'no CV PDF was built (see .astro/cv-pdf.json)' }, async () => {
+  for (const s of scanStrings(await readPdf(readFileSync(CV_PDF)))) assert.doesNotMatch(s, OLD_NAME);
 });
 
 test('every social.json entry keeps the old product name out of its title and short copy (#43)', () => {

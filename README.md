@@ -25,6 +25,7 @@ npm run gate       # confidentiality gate (see Checks)
 npm test           # node:test suites under tests/
 npm run og         # regenerate public/og-default.png with headless Chrome
 npm run og:pages   # render per-page cards to public/og/ (also runs as prebuild)
+npm run cv:pdf     # print /cv/ to dist/pearse-darcy-cv.pdf (also runs as postbuild)
 ```
 
 ## Content
@@ -203,7 +204,18 @@ The collection is the source of truth: edit the Markdown directly. The first twe
 
 ### CV
 
-`/cv/` is built from the site: contact links and location from `src/lib/site.ts`, the featured case studies and the MTS ones that are visible (pending client case studies are excluded, as everywhere; only the start of each period is shown, and roles are left to the case study pages), and the marquee stack as skills. Facts that exist nowhere else on the site (headline, profile, experience, education, and languages once confirmed) live in `src/content/cv/cv.md`; their wording follows `docs/profile/`, and nothing that still carries a verify marker there goes in. The page has a print stylesheet (A4, black on white, no nav or footer, links spelled out, entries never split across pages); "Download PDF" calls `window.print()`. Keep the print preview at two pages or fewer when adding content.
+`/cv/` is built from the site: contact links and location from `src/lib/site.ts`, the featured case studies and the MTS ones that are visible (pending client case studies are excluded, as everywhere; only the start of each period is shown, and roles are left to the case study pages), and the marquee stack as skills. Facts that exist nowhere else on the site (headline, profile, experience, education, and languages once confirmed) live in `src/content/cv/cv.md`; their wording follows `docs/profile/`, and nothing that still carries a verify marker there goes in. The page has a print stylesheet (A4, black on white, no nav or footer, links spelled out, entries never split across pages). Keep it at two pages or fewer when adding content: `npm test` fails on a third.
+
+"Download PDF" is a plain link to `/pearse-darcy-cv.pdf` with a `download` attribute, so it works without JavaScript and hands recruiters a file to attach. The file is printed from the built page by `scripts/cv-pdf.mjs`, which runs as `postbuild` (and alone as `npm run cv:pdf`): it serves `dist/` on a throwaway 127.0.0.1 server for the length of the step, rewrites the root-relative links in the copy of `/cv/` it serves (never in `dist/`) to `https://pearse.dev/`, so the PDF's links are public, and prints with headless Chrome (`--no-pdf-header-footer`, the page's own `@page` rules). It deletes any old PDF first and writes `.astro/cv-pdf.json` (`{ chrome, pdf, pages }`) for the tests. Next to the link, a "Print" button (`window.print()`) appears once JavaScript runs; it is the fallback whenever the link is gone. The page never ships a link to a missing file:
+
+| Situation | PDF | Link in `dist/cv/index.html` | Exit |
+|---|---|---|---|
+| Chrome found, print OK | written | kept | 0 |
+| No Chrome, not CI | none | removed | 0, with a warning |
+| No Chrome, `CI` set | none | removed | 1 |
+| Chrome found but the print fails, times out or writes no, an empty or an unreadable file (CI or not) | deleted | removed | 1 |
+
+"No Chrome" means `findChrome()` (`scripts/og-shared.mjs`) found none; an invalid `CHROME_PATH` still falls back to PATH. To try the no-Chrome path locally, reduce PATH to the Node bin directory and give npm an absolute shell: `/usr/bin/env PATH="$(dirname "$(command -v node)")" CHROME_PATH=/nonexistent npm run --script-shell=/bin/sh cv:pdf`.
 
 ### GitHub section
 
@@ -241,7 +253,7 @@ Every article and visible case study page gets its own 1200x630 card at `/og/<sl
 
 `.github/workflows/check.yml` runs on every pull request and is called by the deploy workflow, whose `build` job needs it green. It runs `npm ci`, then in order: check (`astro check`), build, link crawl, Lighthouse, smoke (the browser smoke run below), `npm test`, gate (the confidentiality gate).
 
-The gate (`scripts/gate.mjs`, ADR 0005) scans `dist/`, `src/` and `docs/` case-insensitively for patterns that must never ship. Patterns come from the repository secret `CONFIDENTIAL_PATTERNS`: one regular expression per line (case-insensitive, multiline: `^`/`$` match per line), blank lines and `#` comments ignored. Every file is scanned except known binary types and files containing a NUL byte. The `#n` in the output counts patterns (non-empty, non-comment lines), not file lines. The printed path can itself reveal a name, so keep sensitive words out of filenames. Fork and Dependabot PRs receive no secret and so only get the warning. A missing `dist/` fails the gate: build first. On a hit it prints `<file>: pattern #<n>` and fails; it never prints the matched text. With no patterns it passes with a warning annotation, so the workflow works before the secret exists.
+The gate (`scripts/gate.mjs`, ADR 0005) scans `dist/`, `src/` and `docs/` case-insensitively for patterns that must never ship. Patterns come from the repository secret `CONFIDENTIAL_PATTERNS`: one regular expression per line (case-insensitive, multiline: `^`/`$` match per line), blank lines and `#` comments ignored. Every file is scanned except known binary types and files containing a NUL byte. PDFs are the exception among binaries: each `.pdf` is read with `pdfjs-dist` (`scripts/pdf-text.mjs`, shared with the tests and loaded only when a PDF is found) and every pattern is tested against its text (per line, with whitespace collapsed so a phrase wrapped across lines or pages still matches, and with whitespace removed so letter-spaced words read whole), its metadata (every Info value and the raw XMP) and its link targets. A PDF that cannot be parsed fails the gate as `<file>: unreadable PDF`. The `#n` in the output counts patterns (non-empty, non-comment lines), not file lines. The printed path can itself reveal a name, so keep sensitive words out of filenames. Fork and Dependabot PRs receive no secret and so only get the warning. A missing `dist/` fails the gate: build first. On a hit it prints `<file>: pattern #<n>` and fails; it never prints the matched text. With no patterns it passes with a warning annotation, so the workflow works before the secret exists.
 
 Locally, put the same patterns in `.confidential-patterns` at the repo root (gitignored, never commit it) and run `npm run build && npm run gate` before pushing. `CONFIDENTIAL_PATTERNS` in the environment takes precedence over the file.
 
@@ -267,7 +279,7 @@ Node 22.23.4 or newer (`.nvmrc`). Astro 7 refuses older 22.x builds, including t
 
 ## Deploy
 
-`.github/workflows/deploy.yml` builds with `withastro/action` and publishes with `actions/deploy-pages` on every push to `master`, on the daily schedule, and on manual dispatch. The repository's Pages source must be set to **GitHub Actions**. `public/CNAME` keeps the custom domain; `site` is `https://pearse.dev` with no `base`.
+`.github/workflows/deploy.yml` builds with `withastro/action` and publishes with `actions/deploy-pages` on every push to `master`, on the daily schedule, and on manual dispatch. The repository's Pages source must be set to **GitHub Actions**. `public/CNAME` keeps the custom domain; `site` is `https://pearse.dev` with no `base`. `withastro/action` runs `npm run build` with `CI` set and devDependencies installed, so the CV PDF is printed there too (ubuntu-latest ships Chrome; without it the deploy fails). The gate does not run on that build, as is already true for its HTML: `check.yml` gates the same content on every pull request, and the deploy needs it green.
 
 `.github/workflows/keepalive.yml` runs weekly (and on manual dispatch) with `actions: write` only. It checks out and commits nothing; it calls the API to re-enable `deploy.yml` and itself, so GitHub's 60-day inactivity cutoff does not silence the daily rebuild. This depends on the enable call resetting the inactivity counter, which GitHub does not document. If it does not, a push to `master` at least every 60 days keeps the schedules alive regardless.
 

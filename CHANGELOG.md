@@ -6,6 +6,7 @@ Notable changes to the site and its publishing pipeline. Newest first. Dates are
 
 ### Added
 - The m-buildz.com and pauldarcy.ie case studies link to their running sites through the existing "Live" link. A test requires every granted client case study titled by a domain to set an https `live` URL on that host and to render it as a Live link (#107).
+- `/cv/` offers its PDF as a real download: `scripts/cv-pdf.mjs` (`postbuild`, or `npm run cv:pdf`) prints the built page with headless Chrome from a throwaway loopback server to `dist/pearse-darcy-cv.pdf`, two A4 pages with links pointing at pearse.dev. "Download PDF" is a plain `download` link; the old button is now "Print" and the fallback. Without Chrome the link is removed from the built page (a warning locally, a failure under CI); a failed print always fails. The confidentiality gate now reads PDFs (text, metadata and link targets, with `pdfjs-dist` 6.4.299 as a pinned devDependency) and fails closed on one it cannot parse; the two-products test checks the PDF too (#113).
 - Every case study closes with a contact block: private code offers a walkthrough call, a public repo is linked, and each has a mailto titled "About <project>". The helper lives in `src/lib/contact.ts` (#103).
 
 ### Changed

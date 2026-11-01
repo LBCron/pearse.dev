@@ -2,14 +2,16 @@
 import Base from '../../layouts/Base.astro';
 import PostRow from '../../components/PostRow.astro';
 import { getPublishedPosts } from '../../lib/posts';
+import { countNoun } from '../../lib/count-label';
 
 const posts = await getPublishedPosts();
+const count = countNoun(posts.length, 'post');
 const tags = [...new Set(posts.flatMap((p) => p.data.tags))].sort();
 ---
 
 <Base title="Writing" description="Notes on building Django platforms, running self-hosted AI in production, and engineering with agents.">
   <section class="wrap pt-10 md:pt-16">
-    <p class="label"><b>{String(posts.length).padStart(2, '0')}</b>{" "}posts<span aria-hidden="true">/</span><a class="inline-block py-2 -my-2 hover:text-lime" href="/rss.xml">RSS</a></p>
+    <p class="label"><b>{count.n}</b>{" "}{count.noun}<span aria-hidden="true">/</span><a class="inline-block py-2 -my-2 hover:text-lime" href="/rss.xml">RSS</a></p>
     <h1 class="display text-4xl mt-5" data-split>Writing</h1>
     <p class="mt-6 text-lg text-steel max-w-[52ch]">
       Decisions, numbers and the things that went wrong. Platform building, self-hosted AI, and agent workflows that

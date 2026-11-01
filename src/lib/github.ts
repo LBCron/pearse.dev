@@ -1,7 +1,7 @@
 /**
  * Build-time GitHub integration for the home page (issue #45).
  *
- * Fetches the public profile, the most recently pushed public repositories (REST) and,
+ * Fetches the public profile, the allowlisted public repositories (REST) and,
  * when a token is present, the last year's contribution calendar (GraphQL), and shapes
  * them into a small view model. A shaped snapshot is committed at src/data/github.json:
  * when the network or the token is unavailable the build uses it and logs a warning, and
@@ -14,10 +14,22 @@ import { dirname, resolve } from 'node:path';
 export const GITHUB_LOGIN = 'pearsedarcy';
 export const REPO_COUNT = 6;
 /**
- * Public repositories never listed: the profile README repo (not a project) and
- * commissioned work whose name or description names a person.
+ * The repo cards are an allowlist (issue #109): a public repo owned by GITHUB_LOGIN becomes
+ * a card only if its name is on one of these hand-kept lists, so a repo made public later
+ * never appears unreviewed. Featured repos come first, in this order; the fork flag does not
+ * matter for a listed name (the site's own repo is a fork of a template). Every name here
+ * needs an entry in DESCRIPTION_OVERRIDES or DESCRIPTION_FALLBACKS.
  */
-export const HIDDEN_REPOS: readonly string[] = [GITHUB_LOGIN, 'aprils-site'];
+export const FEATURED_REPOS: readonly string[] = ['pearse.dev'];
+/** Shown after the featured repos, by last-push day newest first; this order breaks ties. */
+export const SHOWN_REPOS: readonly string[] = [
+  'my-blog',
+  'django-store',
+  'chatterbox-1',
+  'skatehills-flask',
+  'forum-migration',
+  'django-blog',
+];
 /**
  * Descriptions for repos that have none on GitHub (issue #72), keyed by lower-case name.
  * GitHub's own description wins whenever it is set.
@@ -32,6 +44,7 @@ export const DESCRIPTION_FALLBACKS: Readonly<Record<string, string>> = {
  * own copy whatever GitHub says. Overrides win over GitHub, GitHub over the fallbacks.
  */
 export const DESCRIPTION_OVERRIDES: Readonly<Record<string, string>> = {
+  'pearse.dev': 'The source of this site, built with Astro and deployed to GitHub Pages.',
   'my-blog': 'A blog built with Django, styled with Tailwind and DaisyUI.',
   'django-store': 'My first Django e-commerce project.',
   'chatterbox-1': 'My first chatbot, built with Ollama and Django.',
@@ -40,6 +53,8 @@ export const DESCRIPTION_OVERRIDES: Readonly<Record<string, string>> = {
 /** The profile card's bio, in the site's wording rather than GitHub's (issue #78). */
 export const PROFILE_BIO = 'Software engineer in Innsbruck.';
 export const SNAPSHOT_PATH = 'src/data/github.json';
+/** Under the profile stats: says where the work lives, not what the numbers include. */
+export const PROFILE_STATS_CAPTION = 'Most of my work is in private repositories.';
 
 const API = 'https://api.github.com';
 const WEB = 'https://github.com';
@@ -84,7 +99,6 @@ export interface GithubView {
   avatarUrl: string | null;
   bio: string | null;
   publicRepos: number;
-  followers: number;
   repos: GithubRepo[];
   calendar: GithubCalendar | null;
   /** Day the data was fetched, YYYY-MM-DD (UTC). */
@@ -101,7 +115,6 @@ export interface RawUser {
   bio?: string | null;
   avatar_url?: string | null;
   public_repos?: number;
-  followers?: number;
 }
 
 export interface RawRepo {
@@ -162,18 +175,49 @@ export function shapeAvatar(raw: string | null | undefined): string | null {
   }
 }
 
+const FEATURED_RANK = new Map(FEATURED_REPOS.map((n, i) => [n.toLowerCase(), i]));
+const SHOWN_RANK = new Map(SHOWN_REPOS.map((n, i) => [n.toLowerCase(), i]));
+
+/** Whether a repo name is on the featured or the shown list (case-insensitive, like GitHub). */
+export const isListedRepo = (name: string) => FEATURED_RANK.has(name.toLowerCase()) || SHOWN_RANK.has(name.toLowerCase());
+
 /**
- * Public, non-fork repositories owned by `login` itself (never org repos), minus
- * HIDDEN_REPOS, most recently pushed first, at most `limit`.
+ * Drops unlisted names and orders the rest: featured repos in featured-list order, then
+ * shown repos by last-push day (YYYY-MM-DD) newest first, equal days in shown-list order;
+ * at most `limit`. Sorting by day, not timestamp, because the snapshot stores only the day
+ * and live and snapshot must agree. Idempotent.
  */
-export function shapeRepos(raw: RawRepo[], login = GITHUB_LOGIN, limit = REPO_COUNT): GithubRepo[] {
-  const me = login.toLowerCase();
-  const hidden = new Set(HIDDEN_REPOS.map((n) => n.toLowerCase()));
-  return raw
-    .filter((r) => !r.private && !r.fork && r.owner?.login?.toLowerCase() === me && !hidden.has(r.name.toLowerCase()))
-    .filter((r) => r.pushed_at)
-    .sort((a, b) => Date.parse(b.pushed_at!) - Date.parse(a.pushed_at!))
+export function orderRepos<T extends { name: string; pushed: string }>(repos: T[], limit = REPO_COUNT): T[] {
+  const rank = (r: T): [number, string, number] => {
+    const key = r.name.toLowerCase();
+    const f = FEATURED_RANK.get(key);
+    return f !== undefined ? [0, '', f] : [1, r.pushed, SHOWN_RANK.get(key)!];
+  };
+  return repos
+    .filter((r) => isListedRepo(r.name))
+    .map((r) => ({ r, k: rank(r) }))
+    .sort((a, b) => a.k[0] - b.k[0] || (a.k[1] === b.k[1] ? 0 : a.k[1] < b.k[1] ? 1 : -1) || a.k[2] - b.k[2])
     .slice(0, limit)
+    .map(({ r }) => r);
+}
+
+/** Public repos owned by `login` itself (never org repos), whatever the fork flag. */
+const ownPublic = (raw: RawRepo[], login: string) => {
+  const me = login.toLowerCase();
+  return raw.filter((r) => !r.private && r.owner?.login?.toLowerCase() === me);
+};
+
+/** Public, self-owned repos left out because they are on neither list (logged by loadGithub). */
+export function skippedRepos(raw: RawRepo[], login = GITHUB_LOGIN): string[] {
+  return ownPublic(raw, login)
+    .filter((r) => !isListedRepo(r.name))
+    .map((r) => r.name);
+}
+
+/** The repo cards: listed, public repos owned by `login`, ordered by orderRepos. */
+export function shapeRepos(raw: RawRepo[], login = GITHUB_LOGIN, limit = REPO_COUNT): GithubRepo[] {
+  const shaped = ownPublic(raw, login)
+    .filter((r) => r.pushed_at && isListedRepo(r.name))
     .map((r) => ({
       name: r.name,
       url: `${WEB}/${login}/${r.name}`,
@@ -182,6 +226,38 @@ export function shapeRepos(raw: RawRepo[], login = GITHUB_LOGIN, limit = REPO_CO
       stars: r.stargazers_count ?? 0,
       pushed: day(r.pushed_at!),
     }));
+  return orderRepos(shaped, limit);
+}
+
+/**
+ * The repo rule applied to a stored view (the committed snapshot): drops repos that are
+ * unlisted or not at github.com/<login>/<name>, re-orders and caps them, re-checks the avatar
+ * host, and drops keys the view model no longer has (`followers`). Idempotent.
+ */
+export function filterSnapshot(view: GithubView): GithubView {
+  const rest: GithubView & { followers?: unknown } = { ...view };
+  delete rest.followers;
+  const own = (r: GithubRepo) => r.url?.toLowerCase() === `${WEB}/${view.login}/${r.name}`.toLowerCase();
+  return {
+    ...rest,
+    avatarUrl: shapeAvatar(view.avatarUrl),
+    repos: orderRepos(view.repos.filter(own)),
+  };
+}
+
+export interface ProfileStat {
+  label: string;
+  value: string;
+}
+
+/**
+ * The profile card's stats: public repos and, only when the calendar exists, last year's
+ * contributions, formatted like the heatmap caption. Never a 0 or a placeholder.
+ */
+export function profileStats(view: Pick<GithubView, 'publicRepos' | 'calendar'>): { stats: ProfileStat[]; caption: string } {
+  const stats: ProfileStat[] = [{ label: 'Public repos', value: view.publicRepos.toLocaleString('en-GB') }];
+  if (view.calendar) stats.push({ label: 'Contributions (last year)', value: view.calendar.total.toLocaleString('en-GB') });
+  return { stats, caption: PROFILE_STATS_CAPTION };
 }
 
 const LEVELS: Record<string, Level> = {
@@ -219,7 +295,6 @@ export function shapeGithub(
     avatarUrl: shapeAvatar(input.user.avatar_url),
     bio: clean(input.user.bio),
     publicRepos: input.user.public_repos ?? 0,
-    followers: input.user.followers ?? 0,
     repos: shapeRepos(input.repos, login),
     calendar: input.calendar,
     asOf: now.toISOString().slice(0, 10),
@@ -258,7 +333,7 @@ export function readSnapshot(path: string): GithubView | null {
   try {
     if (!existsSync(path)) return null;
     const v = JSON.parse(readFileSync(path, 'utf8')) as GithubView;
-    return v && typeof v.login === 'string' && Array.isArray(v.repos) ? applySiteCopy(v) : null;
+    return v && typeof v.login === 'string' && Array.isArray(v.repos) ? applySiteCopy(filterSnapshot(v)) : null;
   } catch {
     return null;
   }
@@ -338,6 +413,12 @@ export async function loadGithub(opts: LoadOptions = {}): Promise<LoadResult> {
   }
 
   const view = shapeGithub({ user, repos, calendar }, opts.now);
+  // Names stay out of CI logs: Actions logs on a public repo are public, and an unlisted
+  // repo's name can be a client's or a person's.
+  const skipped = skippedRepos(repos, login);
+  if (skipped.length) {
+    log(`skipped ${skipped.length} repos not on the allowlist${process.env.CI === undefined ? `: ${skipped.join(', ')}` : ''}`);
+  }
   log(`${source === 'live' ? 'live' : 'live profile and repos'}: ${view.repos.length} repos${source === 'live' ? `, ${view.calendar?.total ?? 0} contributions` : ''}`);
 
   try {

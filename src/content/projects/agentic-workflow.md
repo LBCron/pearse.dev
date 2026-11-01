@@ -2,6 +2,7 @@
 title: Agentic engineering workflow
 slug: agentic-workflow
 oneLiner: A Claude Code harness for a one-person, many-agent team — worktree isolation enforced by hooks, model routing by issue size, adversarial PR review and a shift handover protocol.
+description: "A Claude Code harness for a one-person, many-agent team: worktree isolation enforced by hooks, model routing by issue size and adversarial PR review."
 period: Jul 2026 – Present
 role: Designer and operator
 stack:

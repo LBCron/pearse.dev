@@ -2,6 +2,7 @@
 title: m-buildz.com
 slug: m-buildz
 oneLiner: My first freelance job — m-buildz.com, a WooCommerce store for JDM and drift car parts in Ireland — and, two years on, the child theme, infrastructure-as-code and rehearsed catalogue scripts that keep it running.
+description: "My first freelance job: m-buildz.com, a WooCommerce store for JDM and drift car parts in Ireland, and the child theme and scripts that keep it running."
 period: Nov 2024 – 2026
 role: Freelance, sole engineer
 stack:

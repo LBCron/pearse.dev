@@ -39,7 +39,7 @@ const contact = contactVariant(d);
 const mailto = contactHref(d.title, SITE.email);
 ---
 
-<Base title={d.title} description={d.oneLiner} {...og}>
+<Base title={d.title} description={d.description ?? d.oneLiner} {...og}>
   <article class="wrap pt-10 md:pt-16">
     <header class="case-head">
       <p class="label">

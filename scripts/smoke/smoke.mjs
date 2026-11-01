@@ -10,6 +10,8 @@
  *   redirects    from /, an in-page navigation into each redirect page reaches its target with
  *                the console clean (the #55 and #79 path)
  *   overflow     at 360 and 320 px, no sitemap URL scrolls sideways
+ *   cards        on every page with an `a.card`, at seven widths from 390 to 1440 px, no element
+ *                or text inside a card reaches past the card's border (#187)
  *   hero         `/?nogl`, `/?reduce` and `/` settle (`data-hero-ready`) into the right mode
  *
  * Usage: node scripts/smoke/smoke.mjs [--dist dist] [--out .smoke] [--skip hero,transitions]
@@ -24,10 +26,12 @@ import { join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { chromium } from 'playwright-core';
 import { findChrome } from '../og-shared.mjs';
-import { serve } from './server.mjs';
+import { resolvePath, serve } from './server.mjs';
 
-const CHECKS = ['console', 'transitions', 'redirects', 'overflow', 'hero'];
+const CHECKS = ['console', 'transitions', 'redirects', 'overflow', 'cards', 'hero'];
 const WIDTHS = [360, 320];
+/** Phone, tablet, small laptop and desktop: #187 overflowed at 768, 1024 and 1080 only. */
+const CARD_WIDTHS = [390, 768, 900, 1024, 1080, 1280, 1440];
 const DESKTOP = { width: 1280, height: 800 };
 /** Explicit timeouts (ms) for every wait. The redirect one must clear the 1 s meta refresh (#79). */
 const T = { nav: 15_000, ready: 10_000, settle: 5_000, redirect: 10_000 };
@@ -118,6 +122,14 @@ function heroChunks() {
 
 const paths = sitemapPaths();
 if (!paths.length) die('smoke: dist/sitemap-0.xml lists no URLs.');
+
+/** Sitemap paths whose built page has an `a.card` (the home and /work/ grids on the real site). */
+function cardPaths() {
+  return paths.filter((path) => {
+    const file = resolvePath(DIST, new URL(path, 'http://x').pathname);
+    return file && /<a\b[^>]*\bclass="card[\s"]/.test(readFileSync(file, 'utf8'));
+  });
+}
 const redirects = redirectPages();
 
 /** Remove every redirect page's old path, and its last path segment, from text that leaves this script. */
@@ -363,7 +375,57 @@ if (run('overflow')) {
   }
 }
 
-// 5. Hero degraded paths on /. `data-hero-ready` is set only once the hero script has decided the mode.
+// 5. Card content inside its card (#187). Every element's box and every text run (a Range, so a
+// long word overflowing a correctly sized heading still counts) must end inside the card's right
+// border. An element clipped by an `overflow` ancestor inside the card is not visible past it.
+if (run('cards')) {
+  const pages = cardPaths();
+  if (!pages.length) fail('cards', 'sitemap', 'no sitemap page has an a.card: the card check did not run');
+  for (const width of CARD_WIDTHS) {
+    const { context, page, where } = await open('cards', { viewport: { width, height: 900 } });
+    for (const path of pages) {
+      where.current = `${path} @ ${width}px`;
+      await step('cards', where.current, async () => {
+        await load(page, path);
+        await page.waitForFunction(() => document.fonts.status === 'loaded', null, { timeout: T.settle });
+        const over = await page.evaluate(() => {
+          const out = [];
+          for (const card of document.querySelectorAll('a.card')) {
+            const edge = card.getBoundingClientRect().right - parseFloat(getComputedStyle(card).borderRightWidth);
+            const clipped = (el) => {
+              for (let p = el.parentElement; p && p !== card; p = p.parentElement) if (getComputedStyle(p).overflowX !== 'visible') return true;
+              return false;
+            };
+            let worst = null;
+            const consider = (right, what) => {
+              if (right > edge + 0.5 && (!worst || right > worst.right)) worst = { right, what };
+            };
+            for (const el of card.querySelectorAll('*')) {
+              const r = el.getBoundingClientRect();
+              if (!(r.width || r.height) || clipped(el)) continue;
+              consider(r.right, el.tagName.toLowerCase() + [...el.classList].slice(0, 2).map((c) => `.${c}`).join(''));
+            }
+            const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
+            for (let t = walker.nextNode(); t; t = walker.nextNode()) {
+              if (!t.textContent.trim() || (t.parentElement !== card && clipped(t.parentElement))) continue;
+              const range = document.createRange();
+              range.selectNodeContents(t);
+              for (const r of range.getClientRects()) consider(r.right, `text in ${t.parentElement.tagName.toLowerCase()}`);
+            }
+            if (worst) out.push({ card: card.getAttribute('href'), what: worst.what, by: Math.round(worst.right - edge) });
+          }
+          return out;
+        });
+        for (const o of over) fail('cards', where.current, `card ${o.card}: ${o.what} ends ${o.by}px past the card's right border`);
+        if (over.length) await screenshot(page, `cards-${width}-${path}`);
+      });
+    }
+    await context.close();
+  }
+  notes.push(`cards: ${pages.length} page(s) x ${CARD_WIDTHS.length} widths`);
+}
+
+// 6. Hero degraded paths on /. `data-hero-ready` is set only once the hero script has decided the mode.
 if (run('hero')) {
   const chunks = heroChunks();
   const READY = '#hero-3d[data-hero-ready]';

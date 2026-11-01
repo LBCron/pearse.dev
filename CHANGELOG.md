@@ -15,6 +15,11 @@ Notable changes to the site and its publishing pipeline. Newest first. Dates are
 ### Fixed
 - Primary nav no longer clips Contact at 320 px: the header row wraps, so the nav drops under the logo when they do not fit. Header and footer links, and the logo, are 32 px tall tap targets (WCAG 1.4.10, 2.5.8) (#105).
 
+## 2026-11-01: hero frame cap, idle pause and touch fix
+
+### Changed
+- The home-page hero caps to 30 fps on phones and low-end devices, pauses after 20 s without input, and no longer sticks after a tap (#117).
+
 ## 2026-11-01: poster first on phones and low-data visits
 
 ### Changed

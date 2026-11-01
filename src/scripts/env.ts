@@ -6,6 +6,7 @@
  * (WebGL unavailable) and `?lite` (stay on the poster). They are documented in
  * the README. The probes here feed the shared rule in `src/lib/scene-gate.ts`.
  */
+import { isIdle, onWake, shouldRender } from '../lib/frame-pacing';
 import type { SceneProbe } from '../lib/scene-gate';
 
 const params = () => new URLSearchParams(window.location.search);
@@ -75,27 +76,50 @@ export function onIdle(fn: () => void, timeout = 1500): void {
   else window.addEventListener('load', go, { once: true });
 }
 
+/** Opt-in pacing for `visibleLoop`. Without it the loop runs every refresh and never pauses. */
+export type LoopOptions = {
+  /** Minimum ms between rendered frames; 0 or absent renders every refresh. */
+  minFrameMs?: number;
+  /** Pause after this many ms without input; 0 or absent never pauses. */
+  idleMs?: number;
+};
+
+/** Events that count as the reader being present. */
+const INPUT_EVENTS = ['pointermove', 'pointerdown', 'wheel', 'scroll', 'keydown', 'touchstart'] as const;
+
 /**
  * Drives a render loop that only runs while `el` is on screen and the tab
  * is visible. Returns a function that stops everything.
+ *
+ * With `opts.minFrameMs` it still requests every animation frame but skips `tick` until the
+ * interval has passed; `dt` is measured from the last rendered frame. With `opts.idleMs` it
+ * stops requesting frames after that long without input and leaves the last frame on screen.
+ * Input, the tab becoming visible and the element scrolling back into view all restart it
+ * through `onWake`, so `dt` starts fresh and the idle clock resets.
  */
-export function visibleLoop(el: Element, tick: (dt: number) => void): () => void {
+export function visibleLoop(el: Element, tick: (dt: number) => void, opts: LoopOptions = {}): () => void {
+  const minFrameMs = opts.minFrameMs ?? 0;
+  const idleMs = opts.idleMs ?? 0;
   let visible = true;
   let hidden = document.hidden;
   let raf = 0;
-  let last = performance.now();
+  let { lastInput, lastRendered: last } = onWake(performance.now());
 
   const frame = (now: number) => {
     raf = 0;
     if (!visible || hidden) return;
-    const dt = Math.min((now - last) / 1000, 0.05);
-    last = now;
-    tick(dt);
+    // Paused: request nothing, so the last frame stays on screen until input wakes the loop.
+    if (isIdle(now, lastInput, idleMs)) return;
+    if (shouldRender(now, last, minFrameMs)) {
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+      tick(dt);
+    }
     raf = requestAnimationFrame(frame);
   };
   const start = () => {
     if (raf || !visible || hidden) return;
-    last = performance.now();
+    ({ lastInput, lastRendered: last } = onWake(performance.now()));
     raf = requestAnimationFrame(frame);
   };
 
@@ -113,11 +137,20 @@ export function visibleLoop(el: Element, tick: (dt: number) => void): () => void
     start();
   };
   document.addEventListener('visibilitychange', onVis);
+
+  // While the loop runs, input only moves the idle clock; `start` is a no-op then and `last`
+  // is left alone, so the frame cap is not defeated by a stream of pointer events.
+  const onInput = () => {
+    lastInput = performance.now();
+    start();
+  };
+  if (idleMs > 0) for (const type of INPUT_EVENTS) window.addEventListener(type, onInput, { passive: true });
   start();
 
   return () => {
     io.disconnect();
     document.removeEventListener('visibilitychange', onVis);
+    if (idleMs > 0) for (const type of INPUT_EVENTS) window.removeEventListener(type, onInput);
     if (raf) cancelAnimationFrame(raf);
     visible = false;
   };

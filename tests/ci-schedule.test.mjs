@@ -42,10 +42,10 @@ test('no step guards on github.event.schedule', () => {
   for (const s of steps) assert.doesNotMatch(norm(s.if), /event\.schedule/, `step "${s.name}"`);
 });
 
-test('deploy.yml keeps the 06:00 UTC cron and build-gating on check, with no guard on the check job', () => {
+test('deploy.yml keeps the 04:23 UTC cron and build-gating on check, with no guard on the check job', () => {
   assert.ok(
-    (deploy.on.schedule ?? []).some((e) => e.cron === '0 6 * * *'),
-    'deploy.yml schedule cron is 0 6 * * *',
+    (deploy.on.schedule ?? []).some((e) => e.cron === '23 4 * * *'),
+    'deploy.yml schedule cron is 23 4 * * *',
   );
   assert.equal(deploy.jobs.check.uses, './.github/workflows/check.yml');
   assert.equal(deploy.jobs.check.if, undefined, 'the check job in deploy.yml must not be skipped on schedule');

@@ -27,8 +27,8 @@ const node = (name) => workflow.nodes.find((n) => n.name === name);
 
 const AUTHOR = 'urn:li:person:abc123';
 const CHAT = '1000';
-const NOW = new Date('2026-11-03T06:00:00Z'); // 07:00 Vienna: not the last daily run
-const LAST_RUN = new Date('2026-11-03T08:00:00Z'); // 09:00 Vienna
+const NOW = new Date('2026-11-03T04:00:00Z'); // 05:00 Vienna: before the daily run, so not the last daily run
+const LAST_RUN = new Date('2026-11-03T06:00:00Z'); // 07:00 Vienna: the one daily run
 const copy = (s) => ({ linkedin: `${s} long`, short: `${s} short` });
 
 const FEED = [
@@ -267,7 +267,7 @@ test('the warning offers nothing, marks nothing offered and records nothing', ()
   assert.deepEqual(state.record, []);
 });
 
-test('the first daily run (07:00 Vienna) does not warn', () => {
+test('a run before the daily run (05:00 Vienna) does not warn', () => {
   const out = decide(daily({ now: NOW }));
   assert.deepEqual(out.map((o) => o.action), ['offer', 'offer']);
 });
@@ -280,11 +280,11 @@ test('a late last run still warns (hour >= the last hour, not ===)', () => {
 test('the hour is Vienna wall-clock time across daylight saving', () => {
   assert.equal(hourIn('Europe/Vienna', new Date('2026-07-01T07:00:00Z')), 9);
   assert.equal(hourIn('Europe/Vienna', new Date('2026-07-01T05:00:00Z')), 7);
-  assert.equal(hourIn('Europe/Vienna', new Date('2026-11-03T08:00:00Z')), 9);
+  assert.equal(hourIn('Europe/Vienna', new Date('2026-11-03T06:00:00Z')), 7);
   assert.equal(hourIn('Europe/Vienna', new Date('2026-06-30T22:00:00Z')), 0, 'midnight is 0, never 24');
   const summer = { config: config({ today: '2026-07-01' }), feed: [{ kind: 'article', id: 'summer', date: '2026-07-01', published: false }] };
   assert.equal(warnings(decide(daily({ ...summer, now: new Date('2026-07-01T07:00:00Z') }))).length, 1);
-  assert.equal(warnings(decide(daily({ ...summer, now: new Date('2026-07-01T05:00:00Z') }))).length, 0);
+  assert.equal(warnings(decide(daily({ ...summer, now: new Date('2026-07-01T03:00:00Z') }))).length, 0);
 });
 
 test('two unpublished articles dated today give two warnings, one per id, in feed order', () => {
@@ -342,7 +342,7 @@ test('in dry run the warning carries the DRY RUN prefix', () => {
 });
 
 test('the date comes from config.today and the hour from now', () => {
-  // A dry run rehearsing another date: today's feed entry is dated 2026-11-10, the clock says 09:00.
+  // A dry run rehearsing another date: today's feed entry is dated 2026-11-10, the clock says 07:00.
   const feed = [{ kind: 'article', id: 'rehearsal', date: '2026-11-10', published: false }];
   const out = decide(daily({ feed, config: config({ dryRun: true, today: '2026-11-10' }) }));
   assert.match(out[0].text, /rehearsal/);
@@ -360,13 +360,21 @@ test('the Daily schedule cron rules are daily on the hour, and the last hour mat
   assert.equal(Math.max(...hours), LAST_DAILY_HOUR);
 });
 
+test('the deploy workflow has exactly one scheduled rebuild, at 04:23 UTC, ahead of the 07:00 Vienna run in both seasons', () => {
+  const yml = read('.github/workflows/deploy.yml');
+  const block = /^ {2}schedule:\n((?: {4}.*\n|\s*#.*\n)+)/m.exec(yml);
+  assert.ok(block, 'deploy.yml has a schedule: block');
+  const crons = [...block[1].matchAll(/^\s*- cron:\s*['"]?([^'"\n]+?)['"]?\s*$/gm)].map((m) => m[1]);
+  assert.deepEqual(crons, ['23 4 * * *']);
+});
+
 // ---- the exported workflow ----
 
 test('workflow is valid n8n JSON with credentials referenced by name only', () => {
   assert.ok(Array.isArray(workflow.nodes) && workflow.connections);
   assert.equal(workflow.settings.timezone, 'Europe/Vienna');
   const schedule = node('Daily schedule').parameters.rule.interval.map((r) => r.expression);
-  assert.ok(schedule.includes('0 7 * * *'));
+  assert.deepEqual(schedule, ['0 7 * * *']);
   for (const n of workflow.nodes) {
     for (const [type, ref] of Object.entries(n.credentials ?? {})) {
       assert.deepEqual(Object.keys(ref), ['name'], `${n.name} ${type}`);
@@ -443,7 +451,7 @@ test('embedded Decide node: daily offer, Approve in dry run, then a no-op rerun'
   assert.match(bad[0].text, /configuration error/);
 });
 
-test('embedded Decide node: the warning appears at 09:00 Vienna and not at 07:00, whatever the real time', () => {
+test('embedded Decide node: the warning appears at 07:00 Vienna and not at 05:00, whatever the real time', () => {
   const vars = { TELEGRAM_CHAT_ID: CHAT, LINKEDIN_AUTHOR_URN: AUTHOR, SCHEDULER_TODAY: '2026-11-03' };
   const feedRes = { statusCode: 200, body: JSON.stringify(FEED) };
   const at = (now) => runNode('Decide', { input: feedRes, upstream: { 'Daily schedule': {} }, staticData: {}, vars, now });
@@ -454,7 +462,7 @@ test('embedded Decide node: the warning appears at 09:00 Vienna and not at 07:00
 });
 
 test('embedded Decide node: the date and the hour come from one clock reading', () => {
-  // Without SCHEDULER_TODAY the date comes from the same pinned instant: 09:00 Vienna on 2026-11-03.
+  // Without SCHEDULER_TODAY the date comes from the same pinned instant: 07:00 Vienna on 2026-11-03.
   const vars = { TELEGRAM_CHAT_ID: CHAT, LINKEDIN_AUTHOR_URN: AUTHOR };
   const feedRes = { statusCode: 200, body: JSON.stringify(FEED) };
   const out = runNode('Decide', { input: feedRes, upstream: { 'Daily schedule': {} }, staticData: {}, vars, now: LAST_RUN });

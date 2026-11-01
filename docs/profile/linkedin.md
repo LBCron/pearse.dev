@@ -65,9 +65,9 @@ Newest first, as LinkedIn shows them. The timeline has seven rows; they map to f
 | Timeline row | Position |
 |---|---|
 | Aug – Oct 2026, Infrastructure and client work | 1 (client work) and 2 (observability, part of wetlabs.app) |
-| Jul – Oct 2026, Platform lead | 2 |
+| Jul 2026 – Present, Platform lead | 2 |
 | Feb – Oct 2026, Software engineer, MTS | 3 |
-| Aug 2025 – Oct 2026, Software engineer, MTS | 3 |
+| Aug 2025 – Present, Software engineer, MTS | 3 |
 | 2025, Freelance, then MTS | 4, then 3 |
 | May – Dec 2024, Freelance and side builds | 4 |
 | Nov 2023 – Apr 2024, Self-taught, then Code Institute | 5 |

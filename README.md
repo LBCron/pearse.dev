@@ -10,7 +10,7 @@ Personal site of Pearse D'Arcy. Static, built with [Astro](https://astro.build) 
 - **GSAP** core + ScrollTrigger + SplitText — scroll reveals, loaded on idle
 - **Fonts** — Archivo (display, expanded), Inter (body), JetBrains Mono (labels), self-hosted from `@fontsource-variable/*`, latin subset only
 
-Node 22 or newer (`.nvmrc` / `engines`).
+Node 22.23.4 or newer (`.nvmrc` / `engines`; see Requirements).
 
 ## Commands
 
@@ -68,8 +68,11 @@ oneLiner: One sentence, what it is and for whom.
 period: Jan – Mar 2026
 role: Sole engineer         # optional, defaults to "Sole engineer"
 stack: [Django 5, PostgreSQL]
-featured: true              # home page shows the first six featured, by order
-order: 7                    # sort key everywhere
+featured: true              # home page shows six cards: featured first, then backfilled by order to six
+order: 7                    # /work/, case-study numbers, Previous/Next and OG cards group by category
+                            # (mts, client, tool, learning) and sort by order within a group; the home
+                            # page uses plain order. The displayed number is the position in that
+                            # sequence, not this raw value
 features: ["…", "…"]
 hooks: ["…", "…"]           # 2–3 pull-quote facts
 repo: https://github.com/…  # optional; omit for private work
@@ -135,7 +138,7 @@ Create `src/content/posts/<slug>.md`. The filename is the URL: `/writing/<slug>/
 ```yaml
 ---
 title: Post title
-description: ≤155 characters, used as the meta description.
+description: ≤160 characters, used as the meta description.
 pubDate: 2026-11-03
 updatedDate: 2026-11-10     # optional
 tags: [django, agents]
@@ -144,7 +147,7 @@ draft: false
 social:
   linkedin: |
     Long-form LinkedIn version, first line is the hook.
-  short: "≤280 chars incl. URL, for X/Bluesky/Mastodon."
+  short: "≤300 chars incl. URL, for X/Bluesky/Mastodon."
 ---
 ```
 

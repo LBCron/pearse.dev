@@ -1,7 +1,10 @@
 ---
 // Home-page GitHub block: profile card, contribution heatmap, allowlisted public repos.
 // Data comes from the build-time fetch in src/lib/github.ts (snapshot fallback).
-import { profileStats, type GithubView } from '../lib/github';
+// The avatar is the committed, self-hosted file (issue #115), never GitHub's CDN.
+import { Picture } from 'astro:assets';
+import avatar from '../assets/github-avatar.jpg';
+import { AVATAR_JPEG_QUALITY, profileStats, type GithubView } from '../lib/github';
 import { formatDate } from '../lib/site';
 import Heatmap from './Heatmap.astro';
 
@@ -19,7 +22,20 @@ const profile = profileStats(view);
 <div class="gh-grid">
   <div class="gh-profile" data-reveal>
     <div class="gh-who">
-      {view.avatarUrl && <img src={view.avatarUrl} alt="" width="80" height="80" loading="lazy" decoding="async" class="gh-avatar" />}
+      <Picture
+        src={avatar}
+        formats={['avif', 'webp']}
+        fallbackFormat="jpeg"
+        widths={[80, 160]}
+        sizes="80px"
+        quality={AVATAR_JPEG_QUALITY}
+        alt=""
+        width={80}
+        height={80}
+        loading="lazy"
+        decoding="async"
+        class="gh-avatar"
+      />
       <div>
         <p class="display-narrow text-2xl">{view.name}</p>
         <p class="font-mono text-xs text-steel mt-1">@{view.login}</p>

@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Card</title>
+<p>Two 200 px cards. The first heading is sized to its card but its one long word runs past the border; the second card fits.</p>
+<a class="card" href="#long" style="display: grid; grid-template-columns: minmax(0, 1fr); width: 200px; border: 2px solid">
+  <h3 id="long-word" style="font-size: 48px; margin: 0">Overlongtitleword</h3>
+</a>
+<a class="card" href="#fits" style="display: block; width: 200px; border: 2px solid">
+  <h3 style="font-size: 16px; margin: 0">Fits</h3>
+</a>
+</html>

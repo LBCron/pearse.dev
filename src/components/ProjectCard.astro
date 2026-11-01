@@ -1,6 +1,7 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import { CATEGORY_LABEL } from '../lib/site';
+import { titleEm } from '../lib/title-fit';
 
 interface Props {
   project: CollectionEntry<'projects'>;
@@ -12,6 +13,8 @@ const { project, index, size = 'md', class: cls = '' } = Astro.props;
 const { title, slug, oneLiner, period, stack, visibility, category, features } = project.data;
 const idx = String(index).padStart(2, '0');
 const chips = stack.slice(0, size === 'lg' ? 7 : 5);
+// The title shrinks only when its widest word would not fit the card (#187).
+const titleStyle = `--title-em: ${titleEm(title)}`;
 ---
 
 <a href={`/work/${slug}/`} class:list={['card', size === 'lg' ? 'card-lg' : 'card-md', cls]} data-reveal>
@@ -21,7 +24,7 @@ const chips = stack.slice(0, size === 'lg' ? 7 : 5);
   </div>
 
   <div class="card-body">
-    <h3 class:list={['display-narrow', size === 'lg' ? 'text-3xl' : 'text-2xl']}>{title}</h3>
+    <h3 class:list={['card-title', 'display-narrow', size === 'lg' ? 'text-3xl' : 'text-2xl']} style={titleStyle}>{title}</h3>
     <p class="card-one">{oneLiner}</p>
     {
       size === 'lg' && (
@@ -50,6 +53,10 @@ const chips = stack.slice(0, size === 'lg' ? 7 : 5);
     padding: 1.25rem;
     gap: 1.5rem;
     min-height: 22rem;
+    /* A grid item that never grows past its track, and the container the title is sized
+       against (#187). */
+    min-width: 0;
+    container-type: inline-size;
   }
   .card-lg {
     min-height: 26rem;
@@ -75,7 +82,20 @@ const chips = stack.slice(0, size === 'lg' ? 7 : 5);
   .card-body {
     margin-top: auto;
     display: grid;
+    /* One column no wider than the card, so a long title cannot widen the text under it. */
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.75rem;
+  }
+  /* Full size unless the widest word would overflow; then just small enough to fit, down to
+     1.25rem. break-word is the last resort for a word wider than the card even at that floor. */
+  .card-title {
+    overflow-wrap: break-word;
+  }
+  .card-lg .card-title {
+    font-size: clamp(1.25rem, 100cqi / var(--title-em), var(--text-3xl));
+  }
+  .card-md .card-title {
+    font-size: clamp(1.25rem, 100cqi / var(--title-em), var(--text-2xl));
   }
   .card-one {
     color: var(--color-steel);

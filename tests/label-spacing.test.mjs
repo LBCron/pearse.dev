@@ -1,12 +1,13 @@
-// Headings and mono labels are built as `<b>01</b> posts`: the gap on screen is a flex `gap`, so
+// Headings and mono labels are built as `<b>1</b> post`: the gap on screen is a flex `gap`, so
 // without a real space after `</b>` textContent and the accessible name run the words together
-// ("Writingabout this project", "01posts"; #197, and #69 before it). Walks every built page.
+// ("Writingabout this project", "1posts"; #197, and #69 before it). Walks every built page.
 // Relies on `npm test`'s pretest build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { countNoun } from '../src/lib/count-label.ts';
 import { parseHtml, find, text, hasClass } from './lib/html.mjs';
 
 process.chdir(fileURLToPath(new URL('..', import.meta.url)));
@@ -62,7 +63,17 @@ test('the related-writing heading reads "Writing about this project"', () => {
   assert.equal(textOf('dist/work/pearse-dev/index.html', (n) => typeof n !== 'string' && n.attrs.id === 'related-title'), 'Writing about this project');
 });
 
-test('the /writing/ count label reads "01 posts" (or the current count)', () => {
+test('countNoun pluralises on the count and does not zero-pad', () => {
+  assert.deepEqual(countNoun(1, 'post'), { n: '1', noun: 'post' });
+  assert.deepEqual(countNoun(0, 'post'), { n: '0', noun: 'posts' });
+  assert.deepEqual(countNoun(2, 'post'), { n: '2', noun: 'posts' });
+  assert.deepEqual(countNoun(12, 'post'), { n: '12', noun: 'posts' });
+});
+
+test('the /writing/ count label matches the number of published posts, singular for one', () => {
   const label = textOf('dist/writing/index.html', (n) => typeof n !== 'string' && n.tag === 'p' && hasClass(n, 'label'));
-  assert.match(label, /^\d{2} posts\b/);
+  const rows = (readFileSync('dist/rss.xml', 'utf8').match(/<item>/g) ?? []).length;
+  const { n, noun } = countNoun(rows, 'post');
+  assert.equal(label, `${n} ${noun}/RSS`);
+  assert.doesNotMatch(label, /^0\d/);
 });

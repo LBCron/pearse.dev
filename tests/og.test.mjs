@@ -1,7 +1,9 @@
 // Asserts one Open Graph card per article and visible case study page, and none for
 // the home and index pages, drafts, future-dated articles or pending client case studies.
 // `npm test`'s pretest runs `npm run build` (og:pages runs as prebuild). Run alone, it
-// builds when dist/ is missing or older than the last og:pages run.
+// builds when dist/ is missing or older than the last og:pages run. Under CI (`npm run
+// test:ci`, no pretest) it never builds: a stale or missing dist/ fails, because CI must
+// test the one build it gates and deploys (#150).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { execSync } from 'node:child_process';
@@ -20,6 +22,8 @@ const DEFAULT_IMAGE = `${SITE}/og-default.png`;
 const HIDDEN_PROJECTS = pendingSlugs();
 const STATUS = '.astro/og-pages.json';
 
+const STALE_IN_CI = 'dist/ is stale or missing; CI must build once before tests';
+
 let status;
 const NO_CHROME = 'Chrome was unavailable at build time (see .astro/og-pages.json); pages use the default image';
 
@@ -28,6 +32,7 @@ before(() => {
     !existsSync('dist/index.html') ||
     !existsSync(STATUS) ||
     statSync(STATUS).mtimeMs > statSync('dist/index.html').mtimeMs;
+  if (stale && process.env.CI) throw new Error(STALE_IN_CI);
   if (stale) execSync('npm run build', { cwd: ROOT, stdio: 'pipe', timeout: 120_000 });
   status = JSON.parse(readFileSync(STATUS, 'utf8'));
 });

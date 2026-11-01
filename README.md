@@ -192,8 +192,8 @@ note: "optional reviewer note"   # optional, not in the feed
 The LinkedIn copy is the body, first line is the hook.
 ```
 
-- `draft` (the default) is never in the social feed. Resolve every `[VERIFY: …]` marker before approving: the build fails on an approved post with a marker left in its title, short copy or body.
-- Articles follow the same rule: the build fails on a non-draft article, past-dated or scheduled, with a `[VERIFY` marker left in its title, description, body, LinkedIn copy or short copy.
+- `draft` (the default) is never in the social feed. Resolve every `[VERIFY: …]` marker before approving.
+- One rule covers every published kind: the build fails on an approved standalone post, a non-draft article (past-dated or scheduled) or a visible case study (with or without social copy) that still has a marker in its body or in any frontmatter field, nested strings included, except the fields in the exemption list `VERIFY_EXEMPT` (today only the standalone `note`). The error names the kind, the id and the field paths, never the marked text. The rule lives in `src/lib/verify-marker.ts`; `npm test` also fails on a marker in any built text file in `dist/`, which covers `/now/`, `/cv/` and the other pages with no feed entry.
 - `approved` is in the feed straight away, even when dated in the future, so the scheduler can plan around its `date`. The scheduler still asks for a human approve before sending anything (ADR 0004).
 
 The collection is the source of truth: edit the Markdown directly. The first twelve were migrated from a JSON file that has since been deleted; `scripts/migrate-standalone.mjs` is kept only as the record of that migration and must not be re-run.

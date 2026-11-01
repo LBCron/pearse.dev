@@ -32,6 +32,7 @@ The daily automated build and deploy that promotes scheduled articles to publish
 
 **Verify marker**:
 An inline placeholder of the form `[VERIFY: …]` left by a ghost-writer where a fact was not confirmed. Content with a verify marker is never approved.
+_Enforced by_: `src/lib/verify-marker.ts`, the only definition of the marker; the build fails on any published content that still has one.
 
 ### Social
 

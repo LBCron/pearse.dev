@@ -163,9 +163,14 @@ test('migrate-standalone writes one file per post, preserves markers, and is ide
 // buildFeed: the merge, filter and sort rules on plain fixtures, independent of today's content.
 const NOW = new Date('2026-11-10T12:00:00Z');
 const copy = { linkedin: ' L ', short: ' S ' };
-const article = (id, pubDate, draft = false, extra = {}) => ({ id, title: id, description: 'D.', pubDate: new Date(pubDate), draft, tags: ['t'], url: `${SITE.url}/writing/${id}/`, body: 'Body.', social: copy, ...extra });
-const standalone = (id, date, status = 'approved', body = 'Copy.') => ({
-  id, title: id, date: new Date(date), pillar: 'Agentic engineering', format: 'Short lesson', visual: 'none', status, short: 'S', body,
+/** Adds `data` as getFeedEntries passes it: the frontmatter, here every fixture field but id, url and body. */
+const withData = (input) => {
+  const { id, url, body, ...front } = input;
+  return { ...input, data: front };
+};
+const article = (id, pubDate, draft = false, extra = {}) => withData({ id, title: id, description: 'D.', pubDate: new Date(pubDate), draft, tags: ['t'], url: `${SITE.url}/writing/${id}/`, body: 'Body.', social: copy, ...extra });
+const standalone = (id, date, status = 'approved', body = 'Copy.', extra = {}) => withData({
+  id, title: id, date: new Date(date), pillar: 'Agentic engineering', format: 'Short lesson', visual: 'none', status, short: 'S', body, ...extra,
 });
 
 test('buildFeed: drafts of both kinds are excluded, the rest sorted ascending across kinds, articles win ties', () => {
@@ -206,50 +211,52 @@ test('buildFeed: a future-dated approved standalone post is published and has no
 });
 
 test('buildFeed: an approved standalone post with a verify marker in its body throws', () => {
-  assert.throws(() => buildFeed([], [standalone('s-bad', '2026-11-20', 'approved', 'Copy [VERIFY: check].')], NOW), /s-bad.*\[VERIFY\]/);
+  assert.throws(() => buildFeed([], [standalone('s-bad', '2026-11-20', 'approved', 'Copy [VERIFY: check].')], NOW), /standalone "s-bad" .*in body;/);
   // The same body on a draft is fine: drafts are never in the feed.
   assert.deepEqual(buildFeed([], [standalone('s-bad', '2026-11-20', 'draft', 'Copy [VERIFY: check].')], NOW), []);
 });
 
 test('buildFeed: a non-draft article with a verify marker in its body throws, naming the id', () => {
   const bad = article('a-bad', '2026-11-01', false, { body: 'Text [VERIFY: check this] more.' });
-  assert.throws(() => buildFeed([bad], [], NOW), /a-bad.*\[VERIFY\].*resolve it or set draft: true/);
+  assert.throws(() => buildFeed([bad], [], NOW), /article "a-bad" .*in body; resolve it or set draft: true/);
 });
 
 test('buildFeed: a future-dated non-draft article with a verify marker throws (the gate for scheduled posts)', () => {
   const bad = article('a-future-bad', '2026-12-24', false, { body: 'Text [VERIFY: check this] more.' });
   assert.ok(bad.pubDate > NOW);
-  assert.throws(() => buildFeed([bad], [], NOW), /a-future-bad.*resolve it or set draft: true/);
+  assert.throws(() => buildFeed([bad], [], NOW), /article "a-future-bad" .*in body; resolve it or set draft: true/);
 });
 
 test('buildFeed: a verify marker only in the article social copy throws', () => {
   const li = article('a-li', '2026-11-01', false, { social: { linkedin: 'L [VERIFY: x]', short: 'S' } });
   const sh = article('a-sh', '2026-12-24', false, { social: { linkedin: 'L', short: 'S [VERIFY: x]' } });
-  assert.throws(() => buildFeed([li], [], NOW), /a-li.*resolve it or set draft: true/);
-  assert.throws(() => buildFeed([sh], [], NOW), /a-sh.*resolve it or set draft: true/);
+  assert.throws(() => buildFeed([li], [], NOW), /article "a-li" .*in social\.linkedin; resolve it or set draft: true/);
+  assert.throws(() => buildFeed([sh], [], NOW), /article "a-sh" .*in social\.short; resolve it or set draft: true/);
 });
 
 test('buildFeed: a future-dated non-draft article with a verify marker in its body throws, naming the article and field; as a draft it does not', () => {
   const bad = article('a-body', '2026-12-24', false, { body: 'Text [VERIFY: x] more.' });
   assert.throws(
     () => buildFeed([bad], [], NOW),
-    { message: 'Article "a-body" is not a draft but still has a [VERIFY] marker in its body; resolve it or set draft: true.' },
+    { message: 'article "a-body" still has a verify marker in body; resolve it or set draft: true.' },
   );
   assert.deepEqual(buildFeed([{ ...bad, draft: true }], [], NOW), []);
 });
 
-test('buildFeed: a verify marker in a non-draft article title, description, LinkedIn or short copy throws, naming the field', () => {
+test('buildFeed: a verify marker in any non-draft article frontmatter field throws, naming its path', () => {
   const cases = [
     ['title', { title: 'T [VERIFY: x]' }],
     ['description', { description: 'D [VERIFY: x]' }],
-    ['LinkedIn copy', { social: { linkedin: 'L [VERIFY: x]', short: 'S' } }],
-    ['short copy', { social: { linkedin: 'L', short: 'S [VERIFY: x]' } }],
+    ['social.linkedin', { social: { linkedin: 'L [VERIFY: x]', short: 'S' } }],
+    ['social.short', { social: { linkedin: 'L', short: 'S [VERIFY: x]' } }],
+    // Tags reach /social.json; no field list names them, the walk finds them.
+    ['tags.1', { tags: ['t', 'u [VERIFY: x]'] }],
   ];
   for (const [field, extra] of cases) {
     const bad = article('a-field', '2026-12-24', false, extra);
     assert.throws(
       () => buildFeed([bad], [], NOW),
-      { message: `Article "a-field" is not a draft but still has a [VERIFY] marker in its ${field}; resolve it or set draft: true.` },
+      { message: `article "a-field" still has a verify marker in ${field}; resolve it or set draft: true.` },
       field,
     );
     assert.deepEqual(buildFeed([{ ...bad, draft: true }], [], NOW), [], `${field} on a draft`);
@@ -267,7 +274,7 @@ function sourceArticles() {
       const id = f.replace(/\.mdx?$/, '');
       return {
         id, title: d.title, description: d.description, pubDate: new Date(d.pubDate), draft: d.draft ?? false,
-        tags: d.tags, url: `${SITE.url}/writing/${id}/`, body: rest.join('---'), social: d.social,
+        tags: d.tags, url: `${SITE.url}/writing/${id}/`, body: rest.join('---'), social: d.social, data: d,
       };
     });
 }
@@ -287,8 +294,8 @@ test('buildFeed: a draft article with a verify marker does not throw and is left
   assert.deepEqual(buildFeed([draft, article('ok', '2026-11-01')], [], NOW).map((e) => e.id), ['ok']);
 });
 
-const project = (id, date, extra = {}) => ({
-  id, title: id, category: 'client', clientPermission: 'granted', url: `${SITE.url}/work/${id}/`,
+const project = (id, date, extra = {}) => withData({
+  id, title: id, category: 'client', clientPermission: 'granted', url: `${SITE.url}/work/${id}/`, body: 'Body.',
   social: { date: new Date(date), linkedin: ' L ', short: ' S ' }, ...extra,
 });
 
@@ -320,6 +327,42 @@ test('buildFeed: pending client case studies and case studies without copy are n
 
 test('buildFeed: case study copy with a verify marker throws, unless the case study is hidden', () => {
   const bad = (extra) => project('c-bad', '2026-11-05', { social: { date: new Date('2026-11-05'), linkedin: 'L [VERIFY: x]', short: 'S' }, ...extra });
-  assert.throws(() => buildFeed([], [], NOW, [bad()]), /c-bad.*\[VERIFY\]/);
+  assert.throws(() => buildFeed([], [], NOW, [bad()]), /project "c-bad" .*in social\.linkedin;/);
   assert.deepEqual(buildFeed([], [], NOW, [bad({ clientPermission: 'pending' })]), []);
+});
+
+test('buildFeed: a visible case study without social copy is still checked: a marker in its body or a section throws', () => {
+  const body = project('c-body', '2026-11-05', { social: undefined, body: 'Text [VERIFY: x] more.' });
+  assert.throws(() => buildFeed([], [], NOW, [body]), /project "c-body" .*in body;/);
+  const deep = project('c-deep', '2026-11-05', {
+    category: 'mts', clientPermission: undefined, social: undefined,
+    sections: [{ id: 'one', title: 'One', summary: 'S.', features: ['F'] }, { id: 'two', title: 'Two', summary: 'S [VERIFY: x]', features: ['F'] }],
+  });
+  assert.throws(() => buildFeed([], [], NOW, [deep]), /project "c-deep" .*in sections\.1\.summary;/);
+  // Clean, it stays out of the feed output as before.
+  assert.deepEqual(buildFeed([], [], NOW, [project('c-clean', '2026-11-05', { social: undefined })]), []);
+});
+
+test('buildFeed: a pending client case study with markers anywhere is not checked and not in the feed', () => {
+  const hidden = project('c-pending', '2026-11-05', {
+    clientPermission: 'pending', body: 'B [VERIFY: x]', oneLiner: 'O [VERIFY: x]',
+    social: { date: new Date('2026-11-05'), linkedin: 'L [VERIFY: x]', short: 'S' },
+  });
+  assert.deepEqual(buildFeed([], [], NOW, [hidden]), []);
+});
+
+test('buildFeed: an approved standalone post is checked in every field but note', () => {
+  const visual = standalone('s-visual', '2026-11-20', 'approved', 'Copy.', { visual: 'Screenshot [VERIFY: which one]' });
+  assert.throws(() => buildFeed([], [visual], NOW), /standalone "s-visual" .*in visual; resolve it or set status: draft/);
+  const noted = standalone('s-note', '2026-11-20', 'approved', 'Copy.', { note: 'Internal [VERIFY: x]' });
+  assert.deepEqual(buildFeed([], [noted], NOW).map((e) => e.id), ['s-note']);
+});
+
+test('buildFeed: an input without data or body throws instead of skipping the check', () => {
+  const { data: _a, ...noData } = article('a-nodata', '2026-11-01');
+  assert.throws(() => buildFeed([noData], [], NOW), { name: 'TypeError', message: /^article "a-nodata"/ });
+  const { data: _s, ...noStandaloneData } = standalone('s-nodata', '2026-11-01');
+  assert.throws(() => buildFeed([], [noStandaloneData], NOW), /standalone "s-nodata"/);
+  const { body: _p, ...noBody } = project('c-nobody', '2026-11-05', { social: undefined });
+  assert.throws(() => buildFeed([], [], NOW, [noBody]), /project "c-nobody"/);
 });

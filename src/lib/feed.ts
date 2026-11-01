@@ -1,6 +1,7 @@
-// Pure social-feed logic. Its only import is the pure visibility module, so node:test
-// can load it with type stripping (hence the explicit .ts extension).
+// Pure social-feed logic. It imports only pure modules (visibility, verify-marker), so node:test
+// can load it with type stripping (hence the explicit .ts extensions).
 import { isPublishedPost, isVisibleProject } from './visibility.ts';
+import { assertPublishable } from './verify-marker.ts';
 // src/lib/social.ts feeds it from the content collections.
 
 export interface Copy {
@@ -19,6 +20,8 @@ export interface ArticleInput {
   url: string;
   /** Markdown body of the article, scanned for verify markers. */
   body: string;
+  /** The full frontmatter as parsed, scanned for verify markers. Required so no caller skips the check. */
+  data: Readonly<Record<string, unknown>>;
   social: Copy;
 }
 
@@ -33,6 +36,8 @@ export interface StandaloneInput {
   short: string;
   /** Markdown body: the LinkedIn copy. */
   body: string;
+  /** The full frontmatter as parsed, scanned for verify markers (except `note`, see VERIFY_EXEMPT). */
+  data: Readonly<Record<string, unknown>>;
 }
 
 export interface ProjectInput {
@@ -43,8 +48,12 @@ export interface ProjectInput {
   clientPermission?: string;
   /** Absolute URL of the case study page. */
   url: string;
-  /** Absent: the case study is not in the feed. */
+  /** Absent: the case study is not in the feed (but is still checked for verify markers). */
   social?: Copy & { date: Date };
+  /** Markdown body of the case study, scanned for verify markers. */
+  body: string;
+  /** The full frontmatter as parsed, scanned for verify markers. */
+  data: Readonly<Record<string, unknown>>;
 }
 
 interface BaseEntry {
@@ -106,9 +115,10 @@ const day = (d: Date) => d.toISOString().slice(0, 10);
  * so the feed never carries its title or copy before its date.
  * Standalone posts have no page, so `published` is always true and they carry no `url`.
  * A visible case study's page is always built, so its `published` is always true too.
- * Throws if a non-draft article (published or scheduled, whatever its date) still has a verify
- * marker in its title, description, body or social copy, or an approved standalone post or a
- * case study still has one in its copy. Draft articles are exempt.
+ * Throws (assertPublishable) if anything that will be published still has a verify marker in any
+ * frontmatter field or its body: every non-draft article, published or scheduled, every approved
+ * standalone post, and every visible case study, with or without social copy. Draft articles,
+ * draft standalone posts and pending client case studies are not checked.
  */
 export function buildFeed(
   articles: ArticleInput[],
@@ -121,17 +131,7 @@ export function buildFeed(
     .map((p) => {
       // Not gated on pubDate: ADR 0003 builds a future article only after its date, so
       // this is the only check that sees its copy before it goes live.
-      const fields: [string, string][] = [
-        ['title', p.title],
-        ['description', p.description],
-        ['body', p.body],
-        ['LinkedIn copy', p.social.linkedin],
-        ['short copy', p.social.short],
-      ];
-      const marked = fields.find(([, text]) => text.includes('[VERIFY'));
-      if (marked) {
-        throw new Error(`Article "${p.id}" is not a draft but still has a [VERIFY] marker in its ${marked[0]}; resolve it or set draft: true.`);
-      }
+      assertPublishable('article', p.id, p.data, p.body);
       const date = day(p.pubDate);
       if (!isPublishedPost(p, now)) return { kind: 'article', id: p.id, date, published: false };
       return {
@@ -152,9 +152,7 @@ export function buildFeed(
   const s: StandaloneEntry[] = standalone
     .filter((p) => p.status === 'approved')
     .map((p) => {
-      if (p.body.includes('[VERIFY')) {
-        throw new Error(`Standalone post "${p.id}" is approved but its body still has a [VERIFY] marker; resolve it or set status: draft.`);
-      }
+      assertPublishable('standalone', p.id, p.data, p.body);
       return {
         kind: 'standalone',
         id: p.id,
@@ -169,13 +167,13 @@ export function buildFeed(
       };
     });
 
-  const p: ProjectEntry[] = projects
-    .filter((c) => c.social && isVisibleProject(c))
+  const visible = projects.filter((c) => isVisibleProject(c));
+  // Every visible case study is checked, before the social filter: its page is built either way.
+  for (const c of visible) assertPublishable('project', c.id, c.data, c.body);
+  const p: ProjectEntry[] = visible
+    .filter((c) => c.social)
     .map((c) => {
       const social = c.social!;
-      if (`${social.linkedin}\n${social.short}`.includes('[VERIFY')) {
-        throw new Error(`Case study "${c.id}" has social copy with a [VERIFY] marker; resolve it or remove the social block.`);
-      }
       return {
         kind: 'project',
         id: c.id,

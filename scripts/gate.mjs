@@ -18,16 +18,9 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { readPdf, scanStrings } from './pdf-text.mjs';
+import { BINARY_EXT, isBinary } from './binary-files.mjs';
 
-const BINARY_EXT = new Set([
-  '.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.ico', '.woff', '.woff2',
-  '.ttf', '.otf', '.mp4', '.webm', '.zip', '.gz',
-]);
 const ROOTS = ['dist', 'src', 'docs'];
-
-function isBinary(buf) {
-  return buf.subarray(0, 8192).includes(0);
-}
 
 function loadPatterns() {
   let raw = process.env.CONFIDENTIAL_PATTERNS ?? '';

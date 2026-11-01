@@ -2,6 +2,7 @@
 title: pearse.dev
 slug: pearse-dev
 oneLiner: This site. A static Astro build with typed content, publish-by-date, a confidentiality gate in CI and a social scheduler that posts nothing without a human's approval.
+description: "This site. A static Astro build with typed content, publish-by-date, a confidentiality gate in CI and a social scheduler that waits for human approval."
 period: Oct 2026 – Present
 role: Sole engineer
 stack:

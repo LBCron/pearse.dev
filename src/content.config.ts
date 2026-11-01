@@ -4,13 +4,17 @@ import { z } from 'astro/zod';
 import { DIAGRAM_NAMES } from './lib/diagrams';
 import { PILLARS, POST_TAGS } from './lib/tags';
 import { publishBlockers } from './lib/verify-marker';
+import { META_DESCRIPTION_MAX, metaDescriptionLength } from './lib/seo';
 
 const projects = defineCollection({
   loader: glob({ base: './src/content/projects', pattern: '**/*.{md,mdx}' }),
   schema: z.object({
     title: z.string(),
     slug: z.string().regex(/^[a-z0-9-]+$/),
+    // The visible lede on the case-study page. Also the meta description unless `description` is set.
     oneLiner: z.string(),
+    // Meta description, for a case study whose oneLiner is too long for one (#134).
+    description: z.string().optional(),
     // An ongoing period is "<start with a four-digit year> – Present" (en dash, single spaces),
     // so the CV's start-only display and the /work/ start-year parser keep their year.
     period: z.string().refine((v) => !/present/i.test(v) || /^(?:[A-Z][a-z]{2} )?(?:19|20)\d{2} – Present$/.test(v), {
@@ -63,6 +67,16 @@ const projects = defineCollection({
           seen.add(s.id);
         });
       }),
+  }).superRefine((d, ctx) => {
+    // The page's meta description is `description ?? oneLiner`; the shared rule caps it (#134).
+    const n = metaDescriptionLength(d.description ?? d.oneLiner);
+    if (n > META_DESCRIPTION_MAX) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [d.description === undefined ? 'oneLiner' : 'description'],
+        message: `"${d.slug}": meta description is ${n} chars, max ${META_DESCRIPTION_MAX}`,
+      });
+    }
   }),
 });
 
@@ -70,7 +84,7 @@ const posts = defineCollection({
   loader: glob({ base: './src/content/posts', pattern: '**/*.{md,mdx}' }),
   schema: z.object({
     title: z.string(),
-    description: z.string().max(160),
+    description: z.string().max(META_DESCRIPTION_MAX),
     pubDate: z.coerce.date(),
     updatedDate: z.coerce.date().optional(),
     // Closed vocabulary (src/lib/tags.ts): an unknown tag fails the build.

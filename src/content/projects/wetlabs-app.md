@@ -2,6 +2,7 @@
 title: wetlabs.app
 slug: wetlabs-app
 oneLiner: Surgical-training video platform — wetlab stations record surgeons, an AI model segments the footage into procedure phases, and every surgeon gets a personal video library.
+description: "Surgical-training video platform: wetlab stations record surgeons, AI segments footage into procedure phases, and each surgeon gets a personal video library."
 period: Aug 2025 – Present
 role: Lead and sole engineer
 stack:

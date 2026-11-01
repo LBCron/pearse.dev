@@ -2,6 +2,7 @@
 title: Dublin Plein Air
 slug: dublin-plein-air
 oneLiner: An art festival's WordPress site audited, hardened and upgraded, then a Django CRM to replace its FileMaker database — WooCommerce sync, scannable passes, check-in, badges, public voting and campaigns.
+description: "An art festival's WordPress site audited, hardened and upgraded, then a Django CRM to replace its FileMaker database, with WooCommerce sync and check-in."
 period: Aug 2026 – Present
 role: Sole engineer
 stack:

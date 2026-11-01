@@ -45,10 +45,14 @@ jobs:
           echo "sha256=$hash" >> "$GITHUB_OUTPUT"
       - name: Link crawl
         run: npm run links
+      # Skipped on the daily scheduled rebuild (#154, ADR 0003): that run publishes date-gated
+      # content, not new code, and a score just under budget must not block the day's article.
+      # Under workflow_call, github.event_name is the caller's event.
       - name: Lighthouse budget
+        if: github.event_name != 'schedule'
         run: npm run lhci
       - name: Upload Lighthouse report
-        if: always()
+        if: always() && github.event_name != 'schedule'
         uses: actions/upload-artifact@v4
         with:
           name: lighthouse-report

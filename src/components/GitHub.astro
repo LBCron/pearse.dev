@@ -1,7 +1,7 @@
 ---
-// Home-page GitHub block: profile card, contribution heatmap, recent public repos.
+// Home-page GitHub block: profile card, contribution heatmap, allowlisted public repos.
 // Data comes from the build-time fetch in src/lib/github.ts (snapshot fallback).
-import type { GithubView } from '../lib/github';
+import { profileStats, type GithubView } from '../lib/github';
 import { formatDate } from '../lib/site';
 import Heatmap from './Heatmap.astro';
 
@@ -13,6 +13,7 @@ const date = (d: string) => formatDate(new Date(`${d}T00:00:00Z`));
 // Identical push dates (a bulk push) carry no information: show dates only when they differ.
 const datesVary = new Set(view.repos.map((r) => r.pushed)).size > 1;
 const handle = view.url.replace(/^https:\/\//, '');
+const profile = profileStats(view);
 ---
 
 <div class="gh-grid">
@@ -26,15 +27,16 @@ const handle = view.url.replace(/^https:\/\//, '');
     </div>
     {view.bio && <p class="mt-5 text-steel">{view.bio}</p>}
     <dl class="gh-stats">
-      <div>
-        <dt>Public repos</dt>
-        <dd>{view.publicRepos}</dd>
-      </div>
-      <div>
-        <dt>Followers</dt>
-        <dd>{view.followers}</dd>
-      </div>
+      {
+        profile.stats.map((s) => (
+          <div>
+            <dt>{s.label}</dt>
+            <dd>{s.value}</dd>
+          </div>
+        ))
+      }
     </dl>
+    <p class="gh-stats-note">{profile.caption}</p>
     <a class="btn mt-6" href={view.url} rel="me">{handle}</a>
   </div>
 
@@ -111,7 +113,8 @@ const handle = view.url.replace(/^https:\/\//, '');
   }
   .gh-stats {
     display: flex;
-    gap: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem 2rem;
     margin: 1.5rem 0 0;
     padding-top: 1rem;
     border-top: 1px solid var(--color-line);
@@ -121,6 +124,11 @@ const handle = view.url.replace(/^https:\/\//, '');
     font-size: var(--text-xs);
     letter-spacing: 0.12em;
     text-transform: uppercase;
+    color: var(--color-steel);
+  }
+  .gh-stats-note {
+    margin: 0.75rem 0 0;
+    font-size: var(--text-sm);
     color: var(--color-steel);
   }
   .gh-stats dd {

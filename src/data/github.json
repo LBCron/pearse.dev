@@ -5,28 +5,19 @@
   "avatarUrl": "https://avatars.githubusercontent.com/u/148990866?v=4&s=160",
   "bio": "Software engineer in Innsbruck.",
   "publicRepos": 22,
-  "followers": 2,
   "repos": [
+    {
+      "name": "pearse.dev",
+      "url": "https://github.com/pearsedarcy/pearse.dev",
+      "description": "The source of this site, built with Astro and deployed to GitHub Pages.",
+      "language": "JavaScript",
+      "stars": 0,
+      "pushed": "2026-11-01"
+    },
     {
       "name": "my-blog",
       "url": "https://github.com/pearsedarcy/my-blog",
       "description": "A blog built with Django, styled with Tailwind and DaisyUI.",
-      "language": "Python",
-      "stars": 0,
-      "pushed": "2026-08-15"
-    },
-    {
-      "name": "django-blog",
-      "url": "https://github.com/pearsedarcy/django-blog",
-      "description": "An early Django blog project.",
-      "language": "Python",
-      "stars": 0,
-      "pushed": "2026-08-15"
-    },
-    {
-      "name": "forum-migration",
-      "url": "https://github.com/pearsedarcy/forum-migration",
-      "description": "A Python tool for migrating data between XenForo forum platforms.",
       "language": "Python",
       "stars": 0,
       "pushed": "2026-08-15"
@@ -54,48 +45,19 @@
       "language": "HTML",
       "stars": 0,
       "pushed": "2026-08-15"
+    },
+    {
+      "name": "forum-migration",
+      "url": "https://github.com/pearsedarcy/forum-migration",
+      "description": "A Python tool for migrating data between XenForo forum platforms.",
+      "language": "Python",
+      "stars": 0,
+      "pushed": "2026-08-15"
     }
   ],
   "calendar": {
-    "total": 6683,
+    "total": 7409,
     "weeks": [
-      [
-        {
-          "date": "2025-10-26",
-          "count": 0,
-          "level": 0
-        },
-        {
-          "date": "2025-10-27",
-          "count": 16,
-          "level": 1
-        },
-        {
-          "date": "2025-10-28",
-          "count": 26,
-          "level": 1
-        },
-        {
-          "date": "2025-10-29",
-          "count": 30,
-          "level": 1
-        },
-        {
-          "date": "2025-10-30",
-          "count": 0,
-          "level": 0
-        },
-        {
-          "date": "2025-10-31",
-          "count": 0,
-          "level": 0
-        },
-        {
-          "date": "2025-11-01",
-          "count": 0,
-          "level": 0
-        }
-      ],
       [
         {
           "date": "2025-11-02",
@@ -1996,11 +1958,38 @@
         },
         {
           "date": "2026-10-27",
-          "count": 32,
+          "count": 37,
           "level": 1
+        },
+        {
+          "date": "2026-10-28",
+          "count": 282,
+          "level": 4
+        },
+        {
+          "date": "2026-10-29",
+          "count": 34,
+          "level": 1
+        },
+        {
+          "date": "2026-10-30",
+          "count": 50,
+          "level": 1
+        },
+        {
+          "date": "2026-10-31",
+          "count": 138,
+          "level": 2
+        }
+      ],
+      [
+        {
+          "date": "2026-11-01",
+          "count": 217,
+          "level": 3
         }
       ]
     ]
   },
-  "asOf": "2026-10-27"
+  "asOf": "2026-11-01"
 }

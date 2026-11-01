@@ -202,11 +202,12 @@ The collection is the source of truth: edit the Markdown directly. The first twe
 
 ### GitHub section
 
-Section 04 on the home page shows the public GitHub profile of `pearsedarcy`: a profile card, the last year's contribution heatmap (inline SVG, no client JS) and the six most recently pushed repositories. Every link goes to github.com. `src/lib/github.ts` fetches it once per build:
+Section 04 on the home page shows the public GitHub profile of `pearsedarcy`: a profile card (public repos and, when the calendar is available, last year's contributions, with a note that most of the work is in private repositories), the last year's contribution heatmap (inline SVG, no client JS) and six repository cards. Every link goes to github.com. `src/lib/github.ts` fetches it once per build:
 
-- Profile and repositories come from the REST API, no token needed. Only public, non-fork repositories owned by `pearsedarcy` are listed, never org repositories; `HIDDEN_REPOS` drops the profile README repo and commissioned work that names a person.
+- Profile and repositories come from the REST API, no token needed. The cards are an allowlist that fails closed: a repository is shown only if it is public, owned by `pearsedarcy` (never an org) and named in `FEATURED_REPOS` or `SHOWN_REPOS` in `src/lib/github.ts`; the fork flag does not matter for a listed name, and anything unlisted is skipped. Featured repositories come first in list order, then shown ones by last-push day (UTC, newest first), with list order breaking ties, capped at six. Every listed name needs an entry in `DESCRIPTION_OVERRIDES` or `DESCRIPTION_FALLBACKS`. To show a new repository, add its name and its copy in the same pull request.
+- The build logs the public repositories it skipped. Locally the line names them; when `CI` is set it logs only the count, because Actions logs on a public repository are public.
 - The contribution calendar comes from GraphQL `contributionsCollection`, which needs `GITHUB_TOKEN`. CI and the deploy pass `github.token`.
-- `src/data/github.json` is the committed, already-shaped snapshot. Without network the build uses it whole; without a token it keeps the snapshot's calendar. Either way it logs a `[github]` warning saying so. A successful fetch rewrites the file when the data changed, so a local build with network may leave it modified: commit it or `git checkout` it.
+- `src/data/github.json` is the committed, already-shaped snapshot. Reading it applies the same repository rule (unlisted repositories dropped, re-ordered, capped) and the avatar-host check. Without network the build uses it whole; without a token it keeps the snapshot's calendar. Either way it logs a `[github]` warning saying so. A successful fetch rewrites the file when the data changed, so a local build with network may leave it modified: commit it or `git checkout` it.
 - `GITHUB_FETCH=0` forces the snapshot (offline builds, reproducible tests).
 - `tests/github.test.mjs` covers the shaping, the fallback paths with a fake `fetch`, and the rendered section.
 

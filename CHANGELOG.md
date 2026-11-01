@@ -2,6 +2,11 @@
 
 Notable changes to the site and its publishing pipeline. Newest first. Dates are merge dates.
 
+## Unreleased
+
+### Changed
+- East Coast Blinds cutover is told one way in the case study, the draft post and the LinkedIn doc: a same-server Apache vhost swap behind Cloudflare, with rollback a config change, described as planned rather than done; a test guards the wording (#106).
+
 ## 2026-10-28: content model restructure
 
 ### Changed

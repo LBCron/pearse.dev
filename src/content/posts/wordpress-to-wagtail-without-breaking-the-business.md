@@ -7,13 +7,13 @@ tags: [django, wagtail, wordpress, migration]
 draft: true
 social:
   linkedin: |
-    The safest WordPress migration I've done kept WordPress running the whole time.
+    The safest way I know to migrate off WordPress keeps WordPress running the whole time.
 
     The client is a small Irish blinds installer. Their website was WordPress. Their actual business needed more than a website: quotes, invoices, suppliers, jobs, customers.
 
     So the job was never "rebuild the website". It was: give them a Django system for the business, with a Wagtail site in front, and switch over without a day where the phone stops ringing.
 
-    How it went:
+    How it's set up:
 
     1. Audit the live WordPress first. Every page, form, redirect and plugin that does something someone relies on.
 
@@ -60,7 +60,7 @@ WordPress keeps its files, its database and its web-server config, untouched. Cu
 
 The alternative I rejected was the usual big-bang: change DNS, archive WordPress, deal with anything that comes up. It is less to run in parallel and it feels cleaner. It also turns every forgotten form or redirect into a live incident, with the old system no longer there to fall back on.
 
-Keeping WordPress on disk, unchanged and untouched, for at least a few weeks after cutover costs almost nothing, because it shares the server. In exchange, the worst case on cutover day is a minute of embarrassment instead of a lost week of enquiries.
+Keeping WordPress on disk, unchanged and untouched, for at least a few weeks after cutover costs almost nothing, because it shares the server. In exchange, the worst case at cutover is a minute of embarrassment instead of a lost week of enquiries.
 
 The cutover itself is a short, written runbook: ship the image, load the content, review it on a password-protected staging subdomain, swap the live vhost, verify from the public internet (every page, the contact form, the sitemap, TLS), purge the Cloudflare cache, then watch the inbox for the first real enquiry. Firewall and backup runbooks were written before cutover, not after.
 

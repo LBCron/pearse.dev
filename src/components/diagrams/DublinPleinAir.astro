@@ -1,0 +1,43 @@
+---
+import Diagram from './Diagram.astro';
+import type { Layout } from './layout';
+
+// One-way sync: registrations flow from the shop into the CRM, never back.
+const OUTPUTS = ['Scannable passes', 'Check-in', 'Badges', 'Public voting', 'Campaigns'];
+
+const wide: Layout = {
+  w: 960,
+  h: 300,
+  nodes: [
+    { id: 'shop', x: 20, y: 110, w: 240, h: 72, label: 'WooCommerce shop', sub: ['on WordPress', 'source of payment truth'] },
+    { id: 'crm', x: 380, y: 110, w: 220, h: 72, label: 'Django CRM', sub: ['one Person', 'roles per edition'] },
+    ...OUTPUTS.map((label, i) => ({ id: `out-${i}`, x: 720, y: 20 + i * 56, w: 220, h: 44, label })),
+  ],
+  edges: [
+    { from: 'shop', to: 'crm', flow: true, label: 'one way' },
+    ...OUTPUTS.map((_, i) => ({ from: 'crm', to: `out-${i}` })),
+  ],
+};
+
+const narrow: Layout = {
+  w: 360,
+  h: 370,
+  nodes: [
+    { id: 'shop', x: 10, y: 10, w: 340, h: 60, label: 'WooCommerce shop', sub: ['source of payment truth'] },
+    { id: 'crm', x: 10, y: 120, w: 150, h: 240, label: 'Django CRM', sub: ['one Person', 'roles per edition'] },
+    ...OUTPUTS.map((label, i) => ({ id: `out-${i}`, x: 200, y: 120 + i * 50, w: 150, h: 40, label })),
+  ],
+  edges: [
+    { from: 'shop', to: 'crm', fromOff: -95, flow: true, label: 'one way' },
+    ...OUTPUTS.map((_, i) => ({ from: 'crm', to: `out-${i}`, fromOff: (i - 2) * 50 })),
+  ],
+};
+---
+
+<Diagram
+  id="diagram-dublin-plein-air"
+  title="Dublin Plein Air shop-to-CRM sync"
+  desc="The WooCommerce shop on the WordPress site takes registrations and payments, and stays the source of payment truth. Registrations sync one way, from the shop into the Django CRM, which keeps one Person with roles per festival edition. From there the CRM issues scannable passes, runs check-in, generates badges, runs the public vote and sends the campaigns. Nothing flows from the CRM back to the shop: it never writes an order."
+  wide={wide}
+  narrow={narrow}
+/>

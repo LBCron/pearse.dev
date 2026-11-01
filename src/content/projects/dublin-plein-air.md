@@ -19,6 +19,7 @@ stack:
   - GitHub Actions → GHCR
 featured: true
 order: 6
+diagram: DublinPleinAir
 features:
   - A read-only external audit of the live site across seven areas — security, privacy, WordPress and WooCommerce, performance, accessibility, SEO and content — with every finding re-checked by a second pass before it was filed.
   - The server's hardening config and the security headers brought into the repository, byte for byte what runs on the box, so a change is a diff rather than a memory.

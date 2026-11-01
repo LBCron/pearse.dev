@@ -117,11 +117,11 @@ A case study can show one architecture diagram under its features, in a figure h
 To add one:
 
 1. Copy an existing diagram (say `MtsCortex.astro`) to `src/components/diagrams/<Name>.astro`.
-2. Describe two layouts in viewBox units: `wide` (shown from 64rem up, about 960 wide) and `narrow` (phones, 360 wide, stacked). Each is a list of `nodes` (box, label, optional `sub` lines, `kind`: service, store, actor, ai or gate for a human approval point) and `edges` between node ids (`flow` for the main path, `both` for two-way, `optional` for opt-in). Edges route orthogonally; use `fromSide`/`toSide`, `fromOff`/`toOff` or `via` when the default crosses a box.
+2. Describe two layouts in viewBox units: `wide` (shown from 64rem up, about 960 wide) and `narrow` (phones, 360 wide, stacked). Each is a list of `nodes` (box, label, optional `sub` lines, `kind`: service, store, actor, ai or gate for a human approval point) and `edges` between node ids (`flow` for the main path, `both` for two-way, `optional` for opt-in, `rollback` for a fallback path that is kept ready but not taken: drawn in steel with its own dash-dot pattern, never animated; it needs a `label` and cannot also be `flow`, or the build fails). Edges route orthogonally; use `fromSide`/`toSide`, `fromOff`/`toOff` or `via` when the default crosses a box.
 3. Give `Diagram` a `title` and a `desc` that tells the flow in sentences, for screen readers.
 4. Add `<Name>` to `DIAGRAM_NAMES` in `src/lib/diagrams.ts` and to `DIAGRAMS` in `src/components/diagrams/index.ts`, then set `diagram: <Name>` on the case study, or on one of its `sections`.
 
-Name only components the case study already names: no hostnames, addresses, customer names or counts. The build fails when a label is too long for its box. Flow edges animate only under `prefers-reduced-motion: no-preference`. Check both layouts at 390 and 1280 px; `tests/diagrams.test.mjs` asserts which titled diagrams each MTS case study renders.
+Name only components the case study already names: no hostnames, addresses, customer names or counts. The build fails when a label is too long for its box. Flow edges animate only under `prefers-reduced-motion: no-preference`. Check both layouts at 390 and 1280 px; `tests/diagrams.test.mjs` asserts which titled diagrams each case study renders.
 
 ### Add a post
 
@@ -198,7 +198,7 @@ The collection is the source of truth: edit the Markdown directly. The first twe
 
 ### CV
 
-`/cv/` is built from the site: contact links and location from `src/lib/site.ts`, the featured and MTS case studies that are visible (pending client case studies are excluded, as everywhere; only the start of each period is shown, and roles are left to the case study pages), and the marquee stack as skills. Facts that exist nowhere else on the site (headline, profile, experience, education, and languages once confirmed) live in `src/content/cv/cv.md`; their wording follows `docs/profile/`, and nothing that still carries a verify marker there goes in. The page has a print stylesheet (A4, black on white, no nav or footer, links spelled out, entries never split across pages); "Download PDF" calls `window.print()`. Keep the print preview at two pages or fewer when adding content.
+`/cv/` is built from the site: contact links and location from `src/lib/site.ts`, the featured case studies and the MTS ones that are visible (pending client case studies are excluded, as everywhere; only the start of each period is shown, and roles are left to the case study pages), and the marquee stack as skills. Facts that exist nowhere else on the site (headline, profile, experience, education, and languages once confirmed) live in `src/content/cv/cv.md`; their wording follows `docs/profile/`, and nothing that still carries a verify marker there goes in. The page has a print stylesheet (A4, black on white, no nav or footer, links spelled out, entries never split across pages); "Download PDF" calls `window.print()`. Keep the print preview at two pages or fewer when adding content.
 
 ### GitHub section
 

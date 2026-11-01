@@ -93,6 +93,7 @@ test('the old product name appears nowhere in dist/, in any case, except as one 
 test('every social.json entry keeps the old product name out of its title and short copy (#43)', () => {
   const feed = JSON.parse(readFileSync('dist/social.json', 'utf8'));
   for (const e of feed) {
+    if (!e.title || !e.social) continue; // scheduled stubs carry neither
     assert.doesNotMatch(e.title, OLD_NAME, `${e.kind}:${e.id} title`);
     assert.doesNotMatch(e.social.short, OLD_NAME, `${e.kind}:${e.id} short`);
   }

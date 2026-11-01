@@ -22,7 +22,7 @@ _Avoid_: publish date, release date
 An article withheld from the site and from the social feed regardless of its publication date, usually because it still carries verify markers.
 
 **Scheduled**:
-A non-draft article whose publication date is still in the future. It has no page yet but it does appear in the social feed, marked as not published.
+A non-draft article whose publication date is still in the future. It has no page yet. It appears in the social feed by id and date only, marked as not published, with no title or copy until the rebuild on its date.
 
 **Published**:
 A non-draft article whose publication date has passed as of the most recent rebuild. It has a page, is in the RSS feed, the sitemap and the Writing index.
@@ -44,7 +44,7 @@ Social copy that is not attached to any article. Has its own date, pillar and fo
 _Avoid_: filler post, loose post
 
 **Social feed**:
-The machine-readable list of every non-draft article and every approved standalone post, with its social copy and published flag, served at `/social.json`. The only input the scheduler reads.
+The machine-readable list of every non-draft article and every approved standalone post, with its social copy and published flag (a scheduled article is listed by id and date only, with no copy until it is published), served at `/social.json`. The only input the scheduler reads.
 
 **Pillar**:
 One of three content themes every piece of social copy belongs to: platform building, self-hosted AI in production, agentic engineering.

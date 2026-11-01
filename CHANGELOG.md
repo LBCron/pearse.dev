@@ -5,6 +5,7 @@ Notable changes to the site and its publishing pipeline. Newest first. Dates are
 ## Unreleased
 
 ### Changed
+- `/social.json` lists a scheduled article as a stub of `kind`, `id`, `date` and `published: false`, with no title, URL, tags or copy until its date; the feed type now narrows on `published` (#111).
 - Ongoing MTS periods read "– Present" instead of a frozen "Oct 2026": the MTS Hub, wetlabs.app and agentic-workflow case studies and the two matching home timeline rows. Finished phases and the client case studies keep their end dates. The project schema rejects a "Present" period without a start year (#93).
 - Home page GitHub cards are an allowlist: only public repositories owned by `pearsedarcy` and named on a featured or shown list appear, so a repository made public later never shows unreviewed. The site's own repository leads, then shown repositories by push day with list order on ties, capped at six; the committed snapshot is filtered the same way. The profile card shows last year's contributions instead of followers, with a note that most of the work is in private repositories. The build log names skipped repositories only outside CI (#109).
 - East Coast Blinds cutover is told one way in the case study, the draft post and the LinkedIn doc: a same-server Apache vhost swap behind Cloudflare, with rollback a config change, described as planned rather than done; a test guards the wording (#106).

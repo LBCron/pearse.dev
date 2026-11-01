@@ -60,6 +60,18 @@ test('an unpublished article is never selected, offered or posted', () => {
   assert.deepEqual(out.map((o) => o.action), ['notify']);
 });
 
+test('a stripped scheduled article (#111) is never selected, offered or posted, and reoffer says not published', () => {
+  // Appended, not inserted: FEED[1..3] are used by position elsewhere.
+  const feed = [...FEED, { kind: 'article', id: 'today-stripped', date: '2026-11-03', published: false }];
+  assert.ok(!ids(selectForDay(feed, '2026-11-03', [])).includes('today-stripped'));
+  assert.ok(!ids(selectToOffer(feed, '2026-11-03', stateFor({}, false))).includes('today-stripped'));
+  assert.match(findForPosting(feed, 'today-stripped', '2026-11-03', []).error, /not published yet/);
+  const out = decide({ request: { mode: 'reoffer', id: 'today-stripped' }, config: config(), feed, state: stateFor({}, false), now: NOW });
+  assert.deepEqual(out.map((o) => o.action), ['notify']);
+  assert.match(out[0].text, /not published yet/);
+  assert.doesNotMatch(out[0].text, /not in the feed/);
+});
+
 test('a draft never reaches the feed, and an unapproved standalone is not eligible', () => {
   const feed = [{ kind: 'standalone', id: 'p09', title: 'x', date: '2026-11-03', published: true, status: 'draft', social: copy('x') }];
   assert.deepEqual(selectForDay(feed, '2026-11-03', []), []);

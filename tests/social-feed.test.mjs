@@ -36,8 +36,9 @@ test('feed is a JSON array of well-formed entries', () => {
     assert.ok(['article', 'standalone', 'project'].includes(e.kind), `kind ${e.kind}`);
     assert.equal(typeof e.id, 'string');
     assert.match(e.date, /^\d{4}-\d{2}-\d{2}$/, e.id);
-    assert.equal(typeof e.status, 'string', e.id);
     assert.equal(typeof e.published, 'boolean', e.id);
+    if (!e.published) continue; // scheduled stubs carry no status or copy (see the stub test)
+    assert.equal(typeof e.status, 'string', e.id);
     assert.ok(e.social?.linkedin?.length > 0, `${e.id} linkedin`);
     assert.ok(e.social?.short?.length > 0, `${e.id} short`);
   }
@@ -49,6 +50,7 @@ test('feed is sorted by date ascending', () => {
 });
 
 test('no draft entries of either kind', () => {
+  // Stubs have no status, so this check is safe on them; ids cover scheduled articles too.
   assert.equal(feed.some((e) => e.status === 'draft'), false);
   const ids = new Set(feed.map((e) => `${e.kind}:${e.id}`));
   for (const id of sourceIds('src/content/posts', /^draft:\s*true\s*$/m)) assert.equal(ids.has(`article:${id}`), false, id);
@@ -58,7 +60,7 @@ test('no draft entries of either kind', () => {
 });
 
 test('article entries keep the legacy fields and link to their page', () => {
-  const articles = feed.filter((e) => e.kind === 'article');
+  const articles = feed.filter((e) => e.kind === 'article' && e.published === true);
   assert.ok(articles.length >= 1);
   for (const e of articles) {
     assert.ok(e.url.startsWith(`${SITE.url}/writing/`), e.url);
@@ -66,6 +68,16 @@ test('article entries keep the legacy fields and link to their page', () => {
     assert.equal(e.pubDate, e.date);
     assert.ok(Array.isArray(e.tags));
   }
+});
+
+test('scheduled articles are stubs: id and date only, no title, url, tags or copy', () => {
+  const stubs = feed.filter((e) => e.kind === 'article' && e.published === false);
+  for (const e of stubs) {
+    assert.deepEqual(Object.keys(e).sort(), ['date', 'id', 'kind', 'published'], e.id);
+    assert.doesNotMatch(JSON.stringify(e), /"(linkedin|short|title|url)"/, e.id);
+  }
+  // Every other entry is published: only articles can be scheduled.
+  assert.ok(feed.filter((e) => e.kind !== 'article').every((e) => e.published === true));
 });
 
 test('feed ids are unique: the scheduler keys its Posting record by id', () => {
@@ -163,17 +175,26 @@ test('buildFeed: drafts of both kinds are excluded, the rest sorted ascending ac
     NOW,
   );
   assert.deepEqual(out.map((e) => `${e.kind}:${e.id}`), ['article:past', 'standalone:s-early', 'article:tie', 'standalone:s-tie', 'article:future']);
-  assert.ok(out.every((e) => e.status === 'approved'));
+  assert.ok(out.filter((e) => e.published).every((e) => e.status === 'approved'));
 });
 
 test('buildFeed: a future-dated article is in the feed as scheduled', () => {
   const [e] = buildFeed([article('future', '2026-12-01')], [], NOW);
-  assert.equal(e.published, false);
-  assert.equal(e.status, 'approved');
-  assert.equal(e.date, '2026-12-01');
-  assert.equal(e.pubDate, '2026-12-01');
-  assert.equal(e.slug, 'future');
-  assert.deepEqual(e.social, { linkedin: 'L', short: 'S' });
+  assert.deepEqual(e, { kind: 'article', id: 'future', date: '2026-12-01', published: false });
+});
+
+test('buildFeed: the same article is a full entry once now is on or after its date', () => {
+  for (const now of [new Date('2026-12-01T00:00:00Z'), new Date('2026-12-01T06:00:00Z'), new Date('2026-12-02T00:00:00Z')]) {
+    const [e] = buildFeed([article('future', '2026-12-01')], [], now);
+    assert.equal(e.published, true, now.toISOString());
+    assert.equal(e.status, 'approved');
+    assert.equal(e.date, '2026-12-01');
+    assert.equal(e.pubDate, '2026-12-01');
+    assert.equal(e.slug, 'future');
+    assert.equal(e.title, 'future');
+    assert.equal(e.url, `${SITE.url}/writing/future/`);
+    assert.deepEqual(e.social, { linkedin: 'L', short: 'S' });
+  }
 });
 
 test('buildFeed: a future-dated approved standalone post is published and has no url', () => {

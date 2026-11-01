@@ -1,56 +1,11 @@
 ---
 import Diagram from './Diagram.astro';
-import type { Layout } from './layout';
+import { eastCoastBlinds } from './east-coast-blinds';
+import { CUTOVER_DONE } from '../../lib/east-coast-blinds';
 
-// The cutover as it is set up: the live path after the vhost swap, with WordPress drawn but
-// reached only by the rollback edge. Names only what the case study's prose names.
-const wide: Layout = {
-  w: 960,
-  h: 330,
-  groups: [{ x: 430, y: 20, w: 510, h: 290, label: 'Same server' }],
-  nodes: [
-    { id: 'visitor', x: 20, y: 60, w: 150, h: 58, kind: 'actor', label: 'Visitor', sub: ['browser'] },
-    { id: 'cloudflare', x: 220, y: 60, w: 170, h: 58, label: 'Cloudflare' },
-    { id: 'apache', x: 460, y: 60, w: 170, h: 58, label: 'Apache', sub: ['live vhost'] },
-    { id: 'django', x: 740, y: 60, w: 180, h: 58, label: 'Django + Wagtail', sub: ['site + back office'] },
-    { id: 'wordpress', x: 460, y: 200, w: 170, h: 58, label: 'WordPress', sub: ['on disk, untouched', 'kept warm'] },
-    { id: 'db', x: 740, y: 200, w: 180, h: 58, kind: 'store', label: 'One database', sub: ['quotes to invoices'] },
-  ],
-  edges: [
-    { from: 'visitor', to: 'cloudflare', flow: true },
-    { from: 'cloudflare', to: 'apache', flow: true },
-    { from: 'apache', to: 'django', flow: true, label: 'reverse proxy' },
-    { from: 'django', to: 'db', both: true },
-    { from: 'apache', to: 'wordpress', rollback: true, label: 'rollback' },
-  ],
-};
-
-const narrow: Layout = {
-  w: 360,
-  h: 412,
-  groups: [{ x: 5, y: 92, w: 350, h: 310, label: 'Same server' }],
-  nodes: [
-    { id: 'visitor', x: 10, y: 10, w: 160, h: 50, kind: 'actor', label: 'Visitor', sub: ['browser'] },
-    { id: 'cloudflare', x: 190, y: 10, w: 160, h: 50, label: 'Cloudflare' },
-    { id: 'apache', x: 95, y: 110, w: 150, h: 58, label: 'Apache', sub: ['live vhost'] },
-    { id: 'wordpress', x: 15, y: 230, w: 155, h: 58, label: 'WordPress', sub: ['on disk, untouched', 'kept warm'] },
-    { id: 'django', x: 190, y: 230, w: 160, h: 58, label: 'Django + Wagtail', sub: ['site + back office'] },
-    { id: 'db', x: 190, y: 330, w: 160, h: 58, kind: 'store', label: 'One database', sub: ['quotes to invoices'] },
-  ],
-  edges: [
-    { from: 'visitor', to: 'cloudflare', flow: true },
-    { from: 'cloudflare', to: 'apache', toOff: -25, flow: true },
-    { from: 'apache', to: 'django', fromSide: 'r', toSide: 't', toOff: -15, flow: true, label: 'reverse proxy' },
-    { from: 'django', to: 'db', both: true },
-    { from: 'apache', to: 'wordpress', fromSide: 'l', toSide: 't', toOff: -10, rollback: true, label: 'rollback' },
-  ],
-};
+// Drawn for the cutover state the copy describes (#203): today's live path while the
+// cutover is planned, the swapped vhost with a rollback edge once it is done.
+const { title, desc, wide, narrow } = eastCoastBlinds(CUTOVER_DONE);
 ---
 
-<Diagram
-  id="diagram-east-coast-blinds"
-  title="East Coast Blinds cutover"
-  desc="How the cutover is set up. A visitor reaches the server through Cloudflare. After the swap, Apache's live vhost is a reverse proxy in front of Django and Wagtail, which serve the public site and the back office from one database. WordPress stays on the same server, on disk and untouched, but no live traffic reaches it. The only path to it is the rollback: putting the WordPress vhost back and reloading Apache."
-  wide={wide}
-  narrow={narrow}
-/>
+<Diagram id="diagram-east-coast-blinds" title={title} desc={desc} wide={wide} narrow={narrow} />

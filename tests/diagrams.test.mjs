@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { pendingSlugs } from './lib/projects.mjs';
 import { HOSTNAME, diagramSvgs, pageCss, textOf } from './lib/diagrams.mjs';
+import { CUTOVER_DONE } from '../src/lib/east-coast-blinds.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 process.chdir(ROOT);
@@ -115,7 +116,7 @@ function nodeBox(body, label) {
 }
 const touches = ([px, py], b) => px >= b.x - 0.5 && px <= b.x + b.w + 0.5 && py >= b.y - 0.5 && py <= b.y + b.h + 0.5;
 
-test('east-coast-blinds: one rollback edge to WordPress, and no flow edge reaches it', () => {
+test('east-coast-blinds: one rollback edge to WordPress, and no flow edge reaches it', { skip: !CUTOVER_DONE }, () => {
   const svg = diagramOf('east-coast-blinds');
   assert.match(textOf(svg), /\brollback\b/);
   const vs = views(svg);
@@ -133,9 +134,32 @@ test('east-coast-blinds: one rollback edge to WordPress, and no flow edge reache
   }
 });
 
+// Before the cutover (#203) the drawing shows today's path: Apache serving WordPress, and a
+// dashed, non-flow edge to Django marked planned. No rollback edge yet.
+test('east-coast-blinds: before cutover, the live flow ends at WordPress and the Django proxy is planned', { skip: CUTOVER_DONE }, () => {
+  const svg = diagramOf('east-coast-blinds');
+  assert.doesNotMatch(textOf(svg), /\brollback\b|live vhost/i);
+  const vs = views(svg);
+  assert.deepEqual(vs.map((v) => v.name), ['wide', 'narrow']);
+  for (const v of vs) {
+    const all = edges(v.body);
+    assert.equal(all.filter((e) => e.classes.includes('edge-rollback')).length, 0, `${v.name}: no rollback edge`);
+    const wordpress = nodeBox(v.body, 'WordPress');
+    const django = nodeBox(v.body, 'Django \\+ Wagtail');
+    const intoWordpress = all.filter((e) => touches(e.end, wordpress));
+    assert.equal(intoWordpress.length, 1, `${v.name}: one edge into WordPress`);
+    assert.ok(intoWordpress[0].classes.includes('edge-flow'), `${v.name}: WordPress is on the live flow`);
+    const intoDjango = all.filter((e) => touches(e.end, django));
+    assert.equal(intoDjango.length, 1, `${v.name}: one edge into Django`);
+    assert.equal(intoDjango[0].classes.includes('edge-flow'), false, `${v.name}: Django proxy is not live`);
+    assert.ok(intoDjango[0].classes.includes('edge-optional'), `${v.name}: Django proxy is dashed`);
+  }
+  assert.match(textOf(svg), /planned proxy/);
+});
+
 test('client diagram descriptions say what the drawing claims', () => {
   const ecb = descOf(diagramOf('east-coast-blinds'));
-  assert.match(ecb, /rollback/);
+  assert.match(ecb, CUTOVER_DONE ? /rollback/ : /planned/);
   assert.match(ecb, /WordPress/);
   const dpa = descOf(diagramOf('dublin-plein-air'));
   assert.match(dpa, /one way/);

@@ -6,7 +6,7 @@ Rules this copy keeps:
 
 - MTS is named by its public name, MTS – The Wetlab Company, and described as a wetlab-education company. No customers, congresses, events or prices.
 - MTS has exactly two products, MTS Hub and wetlabs.app. Packing, event feedback, AI drafting, the second brain and the observability stack are features of those two, never products of their own.
-- Client work is described, not named, until client permission is recorded (#7, #8). No client case study is in Featured.
+- Client permission is recorded for the client case studies (#7, ADR 0006), so a client may be named by its business name only: never an owner or staff member, a server, a price or a business figure.
 - Private repositories are described, never linked.
 - Each pasteable field sits in a code block. Character counts are for the text inside the block, newlines included, as LinkedIn counts them.
 - `[VERIFY: …]` marks a fact the sources do not state. Resolve each one before pasting and delete the marker.
@@ -174,7 +174,10 @@ Add each article when it is published, and move it above the case study it cover
 - https://pearse.dev/writing/an-agentic-engineering-workflow-that-ships/ (from 2026-11-17)
 - https://pearse.dev/writing/observability-with-an-ai-incident-responder/ (from 2026-11-24, above wetlabs.app)
 
-Leave the two client articles and the two client case studies out until permission is recorded.
+Add the two client articles from their publish dates once they are published:
+
+- https://pearse.dev/writing/wordpress-to-wagtail-without-breaking-the-business/ (from 2026-12-01, once published)
+- https://pearse.dev/writing/replacing-filemaker-with-django/ (from 2026-12-08, once published)
 
 ## Skills
 

@@ -3,6 +3,7 @@ title: "Replacing FileMaker with Django for an art festival"
 description: "Modelling a festival's people and registrations in Django: one-way WooCommerce sync, scannable passes, check-in, public voting and email campaigns."
 pubDate: 2026-12-08
 tags: [django, data-modelling, woocommerce, migration]
+project: dublin-plein-air
 # draft until client permission (#7)
 draft: true
 social:

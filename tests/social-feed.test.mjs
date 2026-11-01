@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SITE } from '../src/lib/site.ts';
 import { buildFeed } from '../src/lib/feed.ts';
+import { parse as parseYaml } from 'yaml';
 import { projects } from './lib/projects.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -150,7 +151,7 @@ test('migrate-standalone writes one file per post, preserves markers, and is ide
 // buildFeed: the merge, filter and sort rules on plain fixtures, independent of today's content.
 const NOW = new Date('2026-11-10T12:00:00Z');
 const copy = { linkedin: ' L ', short: ' S ' };
-const article = (id, pubDate, draft = false, extra = {}) => ({ id, title: id, pubDate: new Date(pubDate), draft, tags: ['t'], url: `${SITE.url}/writing/${id}/`, body: 'Body.', social: copy, ...extra });
+const article = (id, pubDate, draft = false, extra = {}) => ({ id, title: id, description: 'D.', pubDate: new Date(pubDate), draft, tags: ['t'], url: `${SITE.url}/writing/${id}/`, body: 'Body.', social: copy, ...extra });
 const standalone = (id, date, status = 'approved', body = 'Copy.') => ({
   id, title: id, date: new Date(date), pillar: 'Agentic engineering', format: 'Short lesson', visual: 'none', status, short: 'S', body,
 });
@@ -205,6 +206,57 @@ test('buildFeed: a verify marker only in the article social copy throws', () => 
   const sh = article('a-sh', '2026-12-24', false, { social: { linkedin: 'L', short: 'S [VERIFY: x]' } });
   assert.throws(() => buildFeed([li], [], NOW), /a-li.*resolve it or set draft: true/);
   assert.throws(() => buildFeed([sh], [], NOW), /a-sh.*resolve it or set draft: true/);
+});
+
+test('buildFeed: a future-dated non-draft article with a verify marker in its body throws, naming the article and field; as a draft it does not', () => {
+  const bad = article('a-body', '2026-12-24', false, { body: 'Text [VERIFY: x] more.' });
+  assert.throws(
+    () => buildFeed([bad], [], NOW),
+    { message: 'Article "a-body" is not a draft but still has a [VERIFY] marker in its body; resolve it or set draft: true.' },
+  );
+  assert.deepEqual(buildFeed([{ ...bad, draft: true }], [], NOW), []);
+});
+
+test('buildFeed: a verify marker in a non-draft article title, description, LinkedIn or short copy throws, naming the field', () => {
+  const cases = [
+    ['title', { title: 'T [VERIFY: x]' }],
+    ['description', { description: 'D [VERIFY: x]' }],
+    ['LinkedIn copy', { social: { linkedin: 'L [VERIFY: x]', short: 'S' } }],
+    ['short copy', { social: { linkedin: 'L', short: 'S [VERIFY: x]' } }],
+  ];
+  for (const [field, extra] of cases) {
+    const bad = article('a-field', '2026-12-24', false, extra);
+    assert.throws(
+      () => buildFeed([bad], [], NOW),
+      { message: `Article "a-field" is not a draft but still has a [VERIFY] marker in its ${field}; resolve it or set draft: true.` },
+      field,
+    );
+    assert.deepEqual(buildFeed([{ ...bad, draft: true }], [], NOW), [], `${field} on a draft`);
+  }
+});
+
+/** Every article source file as a buildFeed input: frontmatter plus the Markdown body. */
+function sourceArticles() {
+  const dir = 'src/content/posts';
+  return readdirSync(dir)
+    .filter((f) => /\.mdx?$/.test(f))
+    .map((f) => {
+      const [, front, ...rest] = readFileSync(join(dir, f), 'utf8').split(/^---\s*$/m);
+      const d = parseYaml(front);
+      const id = f.replace(/\.mdx?$/, '');
+      return {
+        id, title: d.title, description: d.description, pubDate: new Date(d.pubDate), draft: d.draft ?? false,
+        tags: d.tags, url: `${SITE.url}/writing/${id}/`, body: rest.join('---'), social: d.social,
+      };
+    });
+}
+
+test('buildFeed: every non-draft article in the source passes the verify-marker guard', () => {
+  const articles = sourceArticles();
+  const live = articles.filter((a) => !a.draft);
+  assert.ok(live.length > 0, 'no non-draft articles');
+  const out = buildFeed(articles, [], NOW);
+  assert.deepEqual(out.map((e) => e.id).sort(), live.map((a) => a.id).sort());
 });
 
 test('buildFeed: a draft article with a verify marker does not throw and is left out', () => {

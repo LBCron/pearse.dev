@@ -3,6 +3,7 @@ title: "WordPress to Wagtail without breaking the business"
 description: "Audit the live WordPress, build Django and Wagtail alongside it, then swap the live vhost behind Cloudflare with WordPress kept warm as the rollback."
 pubDate: 2026-12-01
 tags: [django, wagtail, wordpress, migration]
+project: east-coast-blinds
 # draft until client permission (#7)
 draft: true
 social:

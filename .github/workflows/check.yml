@@ -51,7 +51,14 @@ jobs:
         run: npm test
         env:
           GITHUB_TOKEN: ${{ github.token }}
+      # Fail closed (GATE_REQUIRED=1) on push, schedule and workflow_dispatch; under
+      # workflow_call this job sees the caller's event_name. Same-repo PRs not opened by
+      # Dependabot receive secrets too, so they are required as well. Fork and Dependabot
+      # PRs get no secret and keep the warning. Empty vars mean unset (ADR 0005 amendment).
       - name: Confidentiality gate
         run: npm run gate
         env:
           CONFIDENTIAL_PATTERNS: ${{ secrets.CONFIDENTIAL_PATTERNS }}
+          GATE_REQUIRED: ${{ (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')) && '1' || '' }}
+          CONFIDENTIAL_PATTERNS_MIN: ${{ vars.CONFIDENTIAL_PATTERNS_MIN }}
+          CONFIDENTIAL_PATTERNS_SHA256: ${{ vars.CONFIDENTIAL_PATTERNS_SHA256 }}

@@ -1,0 +1,11 @@
+# Confidentiality gate allow-list (scripts/gate.mjs, ADR 0005 amendment).
+#
+# One deliberate mention per line:
+#   <n> <content|path> <exact relative path> # <reason>
+#
+# <n> is the pattern's position in the denylist (non-blank, non-comment lines,
+# counted from 1). The path is exact, with forward slashes, no globs. The reason
+# is mandatory and must never quote the matched text: this file is scanned too.
+# An entry with no matching hit is stale and fails the gate, so delete entries
+# when the mention goes. Removing or reordering denylist lines shifts <n>:
+# review this file whenever the list changes.

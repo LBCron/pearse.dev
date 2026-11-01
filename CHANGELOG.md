@@ -2,6 +2,11 @@
 
 Notable changes to the site and its publishing pipeline. Newest first. Dates are merge dates.
 
+## Unreleased: confidentiality gate fails closed
+
+### Changed
+- The confidentiality gate fails closed on deploys and same-repo PRs (`GATE_REQUIRED`), checks a minimum pattern count and an optional fingerprint of the list, scans every tracked file plus `dist/`, and matches file paths as well as content. Deliberate mentions go in `.gate-allow` (ADR 0005 amendment, #98).
+
 ## 2026-10-28: content model restructure
 
 ### Changed

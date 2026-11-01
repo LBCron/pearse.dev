@@ -4,8 +4,8 @@ const path = Astro.url.pathname;
 const isCurrent = (href: string) => !href.includes('#') && path.startsWith(href);
 ---
 
-<header class="wrap flex items-center justify-between gap-4 py-5 md:gap-6 md:py-6">
-  <a href="/" class="shrink-0 font-mono text-xs font-semibold tracking-tight text-paper hover:text-lime sm:text-sm" aria-label="pearse.dev home">
+<header class="wrap flex flex-wrap items-center justify-between gap-x-4 py-3 md:gap-x-6 md:py-4">
+  <a href="/" class="inline-block shrink-0 py-2 font-mono text-xs font-semibold tracking-tight text-paper hover:text-lime sm:text-sm" aria-label="pearse.dev home">
     pearse<span class="text-lime">.</span>dev
   </a>
   <nav aria-label="Primary">
@@ -16,7 +16,7 @@ const isCurrent = (href: string) => !href.includes('#') && path.startsWith(href)
             <a
               href={item.href}
               aria-current={isCurrent(item.href) ? 'page' : undefined}
-              class="font-mono text-xs uppercase tracking-[0.08em] sm:tracking-[0.14em] text-steel hover:text-paper aria-[current=page]:text-paper aria-[current=page]:underline aria-[current=page]:decoration-lime aria-[current=page]:decoration-2 aria-[current=page]:underline-offset-6"
+              class="inline-block py-2 font-mono text-xs uppercase tracking-[0.08em] sm:tracking-[0.14em] text-steel hover:text-paper aria-[current=page]:text-paper aria-[current=page]:underline aria-[current=page]:decoration-lime aria-[current=page]:decoration-2 aria-[current=page]:underline-offset-6"
             >
               {item.label}
             </a>

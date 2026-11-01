@@ -9,14 +9,14 @@ const year = new Date().getFullYear();
       <p class="font-mono text-xs uppercase tracking-[0.14em] text-steel">Built with Astro + Three.js, Innsbruck</p>
       <p class="mt-2 text-sm text-steel">© {year} {SITE.name}. Static HTML, no tracking.</p>
     </div>
-    <ul class="flex flex-wrap gap-x-6 gap-y-2 font-mono text-xs uppercase tracking-[0.14em]">
-      <li><a class="text-steel hover:text-lime" href={SITE.repo}>Source</a></li>
-      <li><a class="text-steel hover:text-lime" href="/now/">Now</a></li>
-      <li><a class="text-steel hover:text-lime" href="/cv/">CV</a></li>
-      <li><a class="text-steel hover:text-lime" href="/rss.xml">RSS</a></li>
-      <li><a class="text-steel hover:text-lime" href="/social.json">social.json</a></li>
-      <li><a class="text-steel hover:text-lime" href={SITE.github}>GitHub</a></li>
-      <li><a class="text-steel hover:text-lime" href={SITE.linkedin}>LinkedIn</a></li>
+    <ul class="flex flex-wrap gap-x-6 gap-y-0 font-mono text-xs uppercase tracking-[0.14em]">
+      <li><a class="inline-block py-2 text-steel hover:text-lime" href={SITE.repo}>Source</a></li>
+      <li><a class="inline-block py-2 text-steel hover:text-lime" href="/now/">Now</a></li>
+      <li><a class="inline-block py-2 text-steel hover:text-lime" href="/cv/">CV</a></li>
+      <li><a class="inline-block py-2 text-steel hover:text-lime" href="/rss.xml">RSS</a></li>
+      <li><a class="inline-block py-2 text-steel hover:text-lime" href="/social.json">social.json</a></li>
+      <li><a class="inline-block py-2 text-steel hover:text-lime" href={SITE.github}>GitHub</a></li>
+      <li><a class="inline-block py-2 text-steel hover:text-lime" href={SITE.linkedin}>LinkedIn</a></li>
     </ul>
   </div>
 </footer>

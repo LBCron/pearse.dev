@@ -8,6 +8,14 @@ export const SITE = {
   github: 'https://github.com/pearsedarcy',
   linkedin: 'https://www.linkedin.com/in/pearsedarcy',
   repo: 'https://github.com/pearsedarcy/pearse.dev',
+  // Optional profile links, shipped unset (#157). Typed `string | null`: under `as const` a bare
+  // `null` would be the literal type `null`, so the "set" branch of every check would be `never`.
+  /** Full https profile URL on Mastodon. Rendered in the footer with rel="me" when set. */
+  mastodon: null as string | null,
+  /** Full https profile URL on bsky.app. Rendered in the footer with rel="me" when set. */
+  bluesky: null as string | null,
+  /** Bluesky DID (`did:plc:…`), served at /.well-known/atproto-did when set. */
+  atprotoDid: null as string | null,
   location: 'Innsbruck, Austria',
   ogImage: '/og-default.png',
 } as const;

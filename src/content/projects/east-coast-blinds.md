@@ -2,7 +2,7 @@
 title: East Coast Blinds
 slug: east-coast-blinds
 oneLiner: WordPress to Django + Wagtail rebuild for an Irish blinds installer, with quoting, invoicing, procurement, jobs and a CRM behind the public site.
-period: Aug – Oct 2026
+period: Aug 2026 – Present
 role: Sole engineer
 stack:
   - Django 5.2 LTS

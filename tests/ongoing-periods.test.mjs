@@ -57,3 +57,39 @@ test('earliestYear ignores "Present" and keeps the year of an ongoing period', (
   assert.equal(earliestYear(['Jul 2026 – Present', '2022 – 2026']), 2022);
   assert.equal(earliestYear(['Jul 2026 – Present']), 2026);
 });
+
+// The freelance client track is ongoing (issue #189): every page that dates it says the same thing.
+const CLIENT_PERIOD = 'Aug 2026 – Present';
+const clientSlugs = ['east-coast-blinds', 'dublin-plein-air'];
+
+test('client case-study frontmatter gives the freelance period, matching the CV entry', () => {
+  const cv = read('src/content/cv/cv.md');
+  assert.match(cv, new RegExp(`title: Freelance Software Engineer[\\s\\S]*?period: ${CLIENT_PERIOD}`));
+  for (const slug of clientSlugs) {
+    const p = projects().find((x) => x.slug === slug);
+    assert.ok(p, `${slug} missing`);
+    assert.equal(p.period, CLIENT_PERIOD, slug);
+  }
+});
+
+test('home timeline, /work/ cards, case pages and /cv/ all tell the client track as ongoing', () => {
+  const home = read('dist/index.html');
+  const timeline = home.match(/<ol class="timeline[\s\S]*?<\/ol>/)?.[0] ?? '';
+  const row = [...timeline.matchAll(/<li[\s\S]*?<\/li>/g)].map((m) => text(m[0])).find((r) => r.includes('Infrastructure and client work'));
+  assert.ok(row, 'client timeline row missing');
+  assert.ok(row.includes(CLIENT_PERIOD), row);
+  assert.equal(row.includes('Oct 2026'), false, row);
+  const work = text(read('dist/work/index.html'));
+  for (const slug of clientSlugs) {
+    assert.ok(text(read(`dist/work/${slug}/index.html`)).includes(CLIENT_PERIOD), `${slug} page`);
+  }
+  assert.ok(work.includes(CLIENT_PERIOD), '/work/ cards');
+  assert.equal(/Aug – Oct 2026/.test(work), false, '/work/ still has a frozen end');
+  const periods = [...read('dist/cv/index.html').matchAll(/class="cv-period"[^>]*>([^<]*)/g)].map((m) => m[1].trim());
+  assert.equal(periods[0], CLIENT_PERIOD, periods.join(' | '));
+});
+
+test('East Coast Blinds body keeps the cutover as still ahead, consistent with an open period', () => {
+  const body = text(read('dist/work/east-coast-blinds/index.html'));
+  assert.ok(body.includes('The swap itself is still ahead'));
+});

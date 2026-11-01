@@ -143,7 +143,7 @@ social:
 ---
 ```
 
-Drafts are excluded everywhere. Posts dated in the future are excluded from the HTML pages and RSS until their `pubDate`; the deploy workflow rebuilds every day at 06:00 UTC so they go live on their date.
+Drafts are excluded everywhere. Posts dated in the future are excluded from the HTML pages and RSS until their `pubDate`; the deploy workflow rebuilds every day at 06:00 UTC so they go live on their date. GitHub disables scheduled workflows after 60 days with no repository activity, so `.github/workflows/keepalive.yml` re-enables the deploy workflow weekly. That works only if the enable call resets GitHub's inactivity counter, which GitHub does not document; the fallback is a push to `master` at least every 60 days.
 
 ### Social feed
 
@@ -262,6 +262,8 @@ Node 22.23.4 or newer (`.nvmrc`). Astro 7 refuses older 22.x builds, including t
 ## Deploy
 
 `.github/workflows/deploy.yml` builds with `withastro/action` and publishes with `actions/deploy-pages` on every push to `master`, on the daily schedule, and on manual dispatch. The repository's Pages source must be set to **GitHub Actions**. `public/CNAME` keeps the custom domain; `site` is `https://pearse.dev` with no `base`.
+
+`.github/workflows/keepalive.yml` runs weekly (and on manual dispatch) with `actions: write` only. It checks out and commits nothing; it calls the API to re-enable `deploy.yml` and itself, so GitHub's 60-day inactivity cutoff does not silence the daily rebuild. This depends on the enable call resetting the inactivity counter, which GitHub does not document. If it does not, a push to `master` at least every 60 days keeps the schedules alive regardless.
 
 ## Docs
 

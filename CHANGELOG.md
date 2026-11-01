@@ -11,6 +11,9 @@ Notable changes to the site and its publishing pipeline. Newest first. Dates are
 - Build-time guard: the feed builder throws for a non-draft article, future-dated or not, with a `[VERIFY` marker in its body or social copy (#92).
 - `docs/verify-answer-sheet.md`: the 22 open markers, one question each, ordered by publish date (#92).
 
+### Fixed
+- Primary nav no longer clips Contact at 320 px: the header row wraps, so the nav drops under the logo when they do not fit. Header and footer links, and the logo, are 32 px tall tap targets (WCAG 1.4.10, 2.5.8) (#105).
+
 ## 2026-10-28: content model restructure
 
 ### Changed

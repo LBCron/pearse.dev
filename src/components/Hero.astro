@@ -1,9 +1,12 @@
 ---
 /**
  * The hero. The H1 is the LCP element and is in the initial HTML, letters
- * pre-split so the rise-in is pure CSS. The 3D object loads on idle; until
- * then (and forever without WebGL) an SVG poster of the same icosahedron,
- * computed here at build time with the same rotation, sits in its place.
+ * pre-split so the rise-in is pure CSS. An SVG poster of the icosahedron,
+ * computed here at build time with the same rotation, is always in the markup.
+ * On idle, `sceneMode()` (src/lib/scene-gate.ts) decides whether to swap in the
+ * 3D object: only capable, motion-tolerant desktop visitors get it, and only
+ * they fetch three.js. The poster stays without WebGL, under reduced motion,
+ * with Save-Data, on a phone-width viewport, or with `?lite`.
  */
 const FIRST = 'Pearse';
 const LAST = 'D’Arcy';
@@ -195,13 +198,14 @@ const lines = edges.map(([i, j]) => {
 </style>
 
 <script>
-  import { onIdle, prefersReducedMotion, supportsWebGL } from '../scripts/env';
+  import { sceneMode } from '../lib/scene-gate';
+  import { onIdle, prefersReducedMotion, sceneProbe } from '../scripts/env';
 
   const root = document.getElementById('hero-3d');
   const canvas = root?.querySelector<HTMLCanvasElement>('canvas');
   if (root && canvas) {
     onIdle(async () => {
-      if (!supportsWebGL()) {
+      if (sceneMode(sceneProbe()) !== 'gl') {
         root.dataset.mode = 'poster';
         return;
       }

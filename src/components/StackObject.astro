@@ -1,8 +1,12 @@
 ---
 /**
  * The second Three.js piece: five slabs for the five layers every platform
- * here shares. Hover a layer name to lift it out of the stack. Without
- * WebGL the SVG poster stays; with reduced motion one frame is drawn.
+ * here shares. Hover a layer name to lift it out of the stack. The SVG poster
+ * is always in the markup; when the stack scrolls near, `sceneMode()`
+ * (src/lib/scene-gate.ts) decides whether to load the 3D scene. Only capable,
+ * motion-tolerant desktop visitors get it, and only they fetch three.js. The
+ * poster stays without WebGL, under reduced motion, with Save-Data, on a
+ * phone-width viewport, or with `?lite`.
  */
 const layers = [
   { name: 'Model', note: 'Django, PostgreSQL, a glossary and ADRs before code' },
@@ -125,7 +129,8 @@ const layers = [
 </style>
 
 <script>
-  import { prefersReducedMotion, supportsWebGL } from '../scripts/env';
+  import { sceneMode } from '../lib/scene-gate';
+  import { prefersReducedMotion, sceneProbe } from '../scripts/env';
 
   const root = document.getElementById('stack-3d');
   const canvas = root?.querySelector<HTMLCanvasElement>('canvas');
@@ -135,7 +140,10 @@ const layers = [
       async ([entry]) => {
         if (!entry?.isIntersecting) return;
         io.disconnect();
-        if (!supportsWebGL()) return;
+        if (sceneMode(sceneProbe()) !== 'gl') {
+          root.dataset.mode = 'poster';
+          return;
+        }
         try {
           const { mountStack } = await import('../scripts/stack');
           mountStack(canvas, { reduced: prefersReducedMotion(), layers: triggers.length, triggers });

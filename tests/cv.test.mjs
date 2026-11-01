@@ -157,6 +157,20 @@ test('the PDF is a real file over 10 KB', { skip: NO_CHROME }, () => {
   assert.ok(statSync(PDF).size > 10 * 1024);
 });
 
+// #191: the screen grain overlay once printed as a page-sized raster per page (2.6 MB).
+test('the PDF stays within its 500 KB size budget', { skip: NO_CHROME }, () => {
+  const size = statSync(PDF).size;
+  assert.ok(size <= 500 * 1024, `${(size / 1024).toFixed(0)} KB`);
+});
+
+test('the PDF embeds no raster images: the CV is text and vector only', { skip: NO_CHROME }, () => {
+  assert.doesNotMatch(readFileSync(PDF).toString('latin1'), /\/Subtype\s*\/Image\b/);
+});
+
+test('/cv/ print stylesheet hides the grain overlay', () => {
+  assert.match(printBlocks(html()), /body:{1,2}after[^{]*\{[^}]*display:\s*none/);
+});
+
 test('the PDF has one or two A4 pages', { skip: NO_CHROME }, async () => {
   const { pages } = await pdf();
   assert.ok(pages.length >= 1 && pages.length <= 2, `${pages.length} pages`);

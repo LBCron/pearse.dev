@@ -1,11 +1,14 @@
 // Issue #42: the person behind the work. The home About section, /cv/ and /now/ tell the same
 // arc (first website at 14, the skating record, Skatedownhills) and list the same hobbies, and the
 // CV presents MTS as exactly two products.
+// Issue #118 adds the written copy: docs/profile (bio and LinkedIn) is read at the source and checked
+// against the built home timeline and /cv/, so the three tell one history.
 // Relies on `npm test`'s pretest build; run `npm run build` first when running this file alone.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { projects as sourceProjects } from './lib/projects.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 process.chdir(ROOT);
@@ -108,4 +111,160 @@ test('no two timeline rows share the same title', () => {
     return spans[1];
   });
   assert.equal(new Set(titles).size, titles.length, `duplicate titles: ${titles.join(' | ')}`);
+});
+
+// ---- Issue #118: docs/profile (bio.md, linkedin.md) agrees with the site ----
+
+const bio = () => read('docs/profile/bio.md');
+const linkedin = () => read('docs/profile/linkedin.md');
+const words = (block) => block.split(/\s+/).filter(Boolean).length;
+const num = (str) => Number(str.replace(/,/g, ''));
+const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+
+/** Every `## N words` section: its heading N, its "N words." line and the fenced block after it. */
+function bioBlocks() {
+  return [...bio().matchAll(/^## (\d+) words\n\n(\d+) words\.\n\n```\n([\s\S]*?)\n```/gm)].map((m) => ({
+    heading: Number(m[1]),
+    line: Number(m[2]),
+    block: m[3],
+  }));
+}
+
+/** Every fenced block in linkedin.md with the stated count nearest above it (commas stripped). */
+function linkedinBlocks() {
+  const found = [];
+  let stated = null;
+  let block = null;
+  for (const line of linkedin().split('\n')) {
+    if (line.startsWith('```')) {
+      if (block === null) block = [];
+      else {
+        found.push({ stated, text: block.join('\n') });
+        block = null;
+      }
+    } else if (block !== null) block.push(line);
+    else {
+      // Four formats occur; a fifth makes the block count below fail instead of being skipped.
+      const m = line.match(/\(([\d,]+) characters\)|Description:\*\* ([\d,]+) characters|This one is ([\d,]+)\./);
+      if (m) stated = num(m[1] ?? m[2] ?? m[3]);
+    }
+  }
+  return found;
+}
+
+const linkedinAbout = () => linkedinBlocks().find((b) => /^I build the systems/.test(b.text) && b.text.length > 1000);
+
+test('bio.md: exactly three blocks, and each has the word count its heading and "N words." line state', () => {
+  const blocks = bioBlocks();
+  assert.deepEqual(blocks.map((b) => b.heading), [50, 100, 300]);
+  for (const b of blocks) {
+    assert.equal(b.line, b.heading, `"${b.heading} words." line`);
+    assert.equal(words(b.block), b.heading, `${b.heading}-word block has ${words(b.block)} words`);
+  }
+});
+
+test('linkedin.md: exactly ten fenced blocks, each as long as its stated character count, and the About fits 2,600', () => {
+  const blocks = linkedinBlocks();
+  assert.equal(blocks.length, 10, 'headlines (3), About, five descriptions, Open to');
+  for (const b of blocks) {
+    assert.ok(b.stated !== null, `no stated count above: ${b.text.slice(0, 40)}`);
+    assert.equal(b.text.length, b.stated, `"${b.text.slice(0, 40)}…" is ${b.text.length}, stated ${b.stated}`);
+  }
+  const about = linkedinAbout();
+  assert.ok(about, 'About block not found');
+  assert.ok(about.text.length <= 2600, `About is ${about.text.length} characters`);
+});
+
+test('the 300-word bio and the LinkedIn About say two earlier tools, never three', () => {
+  assert.doesNotMatch(bio() + linkedin(), /three earlier tools/i);
+  assert.doesNotMatch(bio() + linkedin(), /seven rows/i);
+  assert.match(bioBlocks().find((b) => b.heading === 300).block, /two earlier tools/);
+  assert.match(linkedinAbout().text, /two earlier tools/);
+});
+
+test('the 100- and 300-word bios and the LinkedIn About tell the skating arc', () => {
+  const [, b100, b300] = bioBlocks().map((b) => b.block);
+  const about = linkedinAbout().text;
+  for (const [name, t] of [['100-word bio', b100], ['300-word bio', b300], ['LinkedIn About', about]]) {
+    assert.match(t, /downhill skateboard/i, name);
+  }
+  for (const [name, t] of [['100-word bio', b100], ['300-word bio', b300], ['LinkedIn About', about]]) {
+    assert.match(t, /Skatedownhills/, name);
+  }
+  for (const [name, t] of [['300-word bio', b300], ['LinkedIn About', about]]) {
+    assert.match(t, /2nd overall in the 2019 IDF European rankings/, name);
+    assert.match(t, /BDSL/, name);
+  }
+});
+
+/** The built home timeline's rows, oldest first, as [period, context]. */
+function timelineRows() {
+  const html = read('dist/index.html');
+  const ol = html.match(/<ol class="timeline[^"]*"[\s\S]*?<\/ol>/)?.[0] ?? '';
+  const lis = [...ol.matchAll(/<li\b[\s\S]*?<\/li>/g)].map((m) => m[0]);
+  return lis.map((li) => [...li.matchAll(/<span[^>]*>([\s\S]*?)<\/span>/g)].slice(0, 2).map((s) => text(s[1]).trim()));
+}
+
+/** linkedin.md's mapping table under `## Experience`, as rows of trimmed cells (header and rule dropped). */
+function mappingTable() {
+  const section = linkedin().split(/^## Experience$/m)[1]?.split(/^## /m)[0] ?? '';
+  return section
+    .split('\n')
+    .filter((l) => l.startsWith('|'))
+    .map((l) => l.split('|').slice(1, -1).map((c) => c.trim()))
+    .slice(2);
+}
+
+test('the mapping table, the "timeline has N rows" sentence and the built timeline agree on the row count', () => {
+  const section = linkedin().split(/^## Experience$/m)[1] ?? '';
+  const said = section.match(/The timeline has (\w+) rows/)?.[1];
+  assert.ok(said, 'no "The timeline has N rows" sentence');
+  const inDist = (read('dist/index.html').match(/<ol class="timeline[^"]*"[\s\S]*?<\/ol>/)?.[0].match(/<li\b/g) ?? []).length;
+  assert.ok(inDist > 0, 'no <li> inside <ol class="timeline"> on dist/index.html');
+  assert.equal(NUMBER_WORDS.indexOf(said), inDist, `sentence says ${said}, timeline has ${inDist}`);
+  assert.equal(mappingTable().length, inDist, 'mapping table rows');
+});
+
+test('the mapping table lists the timeline periods and contexts, newest first', () => {
+  const rows = timelineRows().reverse();
+  const table = mappingTable();
+  assert.deepEqual(table.map((r) => r[0]), rows.map((r) => r[0]));
+  assert.deepEqual(table.map((r) => r[1]), rows.map((r) => r[1]));
+  // The three rows before software map to no LinkedIn position.
+  assert.deepEqual(table.slice(-3).map((r) => r[2]), Array(3).fill('— (before software)'));
+});
+
+test('the "map to N positions" sentence matches the numbered positions under Experience', () => {
+  const section = linkedin().split(/^## Experience$/m)[1]?.split(/^## /m)[0] ?? '';
+  const said = section.match(/map to (\w+) positions/)?.[1];
+  assert.ok(said, 'no "map to N positions" sentence');
+  const headings = [...section.matchAll(/^### (\d+)\. /gm)].map((m) => Number(m[1]));
+  assert.deepEqual(headings, headings.map((_, i) => i + 1), 'positions are numbered 1..N');
+  assert.equal(NUMBER_WORDS.indexOf(said), headings.length);
+});
+
+/** Text between two ids on the built CV, and the cv-period values inside it. */
+const cvSlice = (from, to) => {
+  const page = cv();
+  const a = page.indexOf(`id="${from}"`);
+  const b = to ? page.indexOf(to, a) : -1;
+  assert.ok(a >= 0, `id="${from}" missing`);
+  return page.slice(a, b < 0 ? undefined : b);
+};
+const periods = (html) => [...html.matchAll(/class="cv-period[^"]*"[^>]*>([^<]*)</g)].map((m) => m[1].trim());
+
+test('/cv/ experience periods are Aug 2026, Aug 2025, May 2024, in that order (case studies not counted)', () => {
+  assert.deepEqual(periods(cvSlice('cv-experience', 'id="cv-work"')), ['Aug 2026 – Present', 'Aug 2025 – Present', 'May 2024 – 2025']);
+});
+
+test('/cv/ education period is exactly Nov 2023 – Apr 2024', () => {
+  assert.deepEqual(periods(cvSlice('cv-education', '</section>')), ['Nov 2023 – Apr 2024']);
+});
+
+test('/cv/ experience has the festival CRM and names no client case study', () => {
+  const t = text(cvSlice('cv-experience', 'id="cv-work"'));
+  assert.match(t, /festival CRM/);
+  const clients = sourceProjects().filter((p) => p.clientPermission !== undefined);
+  assert.ok(clients.length > 0, 'no case study carries clientPermission');
+  for (const p of clients) assert.equal(t.includes(p.title), false, `experience names client case study "${p.title}"`);
 });

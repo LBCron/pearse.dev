@@ -6,6 +6,13 @@
 # under `products`, described by what they do, never by their old names.
 headline: 'Software engineer at MTS – The Wetlab Company. I build its two products, MTS Hub and wetlabs.app, run self-hosted AI in production, and ship with an agent team under review.'
 experience:
+  - title: Freelance Software Engineer
+    organisation: Self-employed
+    period: Aug 2026 – Present
+    summary: 'Client rebuilds, alongside MTS.'
+    bullets:
+      - 'Rebuilt a small business''s WordPress site in Django and Wagtail, with quoting, invoicing, procurement, jobs and a CRM, so that the website and the back office share one database.'
+      - 'Built a festival CRM in Django so that a legacy desktop database only one person could operate gave way to shop sync, registrations, check-in and email campaigns in one system.'
   - title: Software Engineer
     organisation: MTS – The Wetlab Company
     period: Aug 2025 – Present

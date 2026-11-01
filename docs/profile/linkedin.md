@@ -35,7 +35,7 @@ I build the systems a wetlab-education company runs on: a surgical-training vide
 
 ## About
 
-Limit 2,600 characters. This one is 1,881. The first two lines are the preview before "see more" and stand on their own.
+Limit 2,600 characters. This one is 2,121. The first two lines are the preview before "see more" and stand on their own.
 
 ```
 I build the systems a wetlab-education company runs on, and the agent workflow that lets one engineer ship all of it under review.
@@ -45,13 +45,15 @@ At MTS – The Wetlab Company in Innsbruck, that means:
 
 wetlabs.app, a surgical-training video platform. Each wetlab station records the surgeon, a small supervised model chapters the footage by procedure phase, and the surgeon leaves with their own library. It runs at live congresses, and every merge to main deploys to production.
 
-MTS Hub, the operations system of record: congresses, courses, contacts, bookings, packing, staffing, certificates and comms on one model. It replaced spreadsheets, a FileMaker database and three earlier tools of mine. 6000+ tests, 22 ADRs, and a human-approval gate before any email leaves the system.
+MTS Hub, the operations system of record: congresses, courses, contacts, bookings, packing, staffing, certificates and comms on one model. It replaced spreadsheets, a FileMaker database and two earlier tools of mine. 6000+ tests, 22 ADRs, and a human-approval gate before any email leaves the system.
 
 The observability that keeps both honest: OpenTelemetry, OpenObserve and GlitchTip, with an AI agent that reads each alert and posts a first diagnosis to Telegram. It is wrong sometimes. It is fast every time, and it shows its working.
 
 Since mid-2026 most of my code is written by agents and reviewed before it merges. The harness is the part I would talk about first: one planning session, cheaper delegates routed by issue size, each in its own git worktree; hooks that block destructive git commands in a shared checkout; a prosecutor model that argues against every PR. Most of the rules came from failures.
 
 What I care about: writing decisions down before they get expensive, small trained models over general ones when the answer has to be right, and boring infrastructure that tells you when it breaks.
+
+Before software: ten years racing downhill skateboards, including 2nd overall in the 2019 IDF European rankings (European vice champion) and the BDSL title. Building Skatedownhills, an events calendar for the sport, brought me back to code.
 
 Before MTS: a full-stack diploma in 2024, then freelance Django, Wagtail, WordPress and TYPO3 work. I still take the odd client rebuild. From Dublin, based in Innsbruck.
 
@@ -60,17 +62,21 @@ Case studies and writing: https://pearse.dev
 
 ## Experience
 
-Newest first, as LinkedIn shows them. The timeline has seven rows; they map to five positions:
+Newest first, as LinkedIn shows them. The timeline has nine rows; they map to five positions:
 
-| Timeline row | Position |
-|---|---|
-| Aug – Oct 2026, Infrastructure and client work | 1 (client work) and 2 (observability, part of wetlabs.app) |
-| Jul 2026 – Present, Platform lead | 2 |
-| Feb – Oct 2026, Software engineer, MTS | 3 |
-| Aug 2025 – Present, Software engineer, MTS | 3 |
-| 2025, Freelance, then MTS | 4, then 3 |
-| May – Dec 2024, Freelance and side builds | 4 |
-| Nov 2023 – Apr 2024, Self-taught, then Code Institute | 5 |
+| Timeline period | Timeline context | Position |
+|---|---|---|
+| Aug – Oct 2026 | Infrastructure and client work | 1 (client work) and 2 (observability, part of wetlabs.app) |
+| Jul 2026 – Present | Platform lead, sole engineer, agent-assisted | 2 |
+| Feb – Oct 2026 | Internal tools, MTS Hub | 3 |
+| Aug 2025 – Present | Software engineer, MTS | 3 |
+| May 2024 – 2025 | Freelance | 4 |
+| Nov 2023 – Apr 2024 | Code Institute full-stack diploma | 5 |
+| 2022 | Skatedownhills | — (before software) |
+| From 2014 | Professional downhill skateboarder | — (before software) |
+| Age 14 | Legion Airsoft | — (before software) |
+
+The three rows before software have no LinkedIn position. The work in Skatedownhills and the skating career is told in the About instead.
 
 Positions 2 and 3 go under one company on LinkedIn, so they show as two roles at MTS.
 

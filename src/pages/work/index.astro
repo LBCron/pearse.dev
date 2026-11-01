@@ -17,7 +17,7 @@ const groups = CATEGORY_ORDER.map((cat) => ({
 
 <Base title="Work" description="Case studies: Django platforms for live medical-training events, self-hosted AI, observability, client rebuilds and tooling.">
   <section class="wrap pt-10 md:pt-16">
-    <p class="label"><b>{String(projects.length).padStart(2, '0')}</b>projects{since ? `, ${since} to now` : ''}</p>
+    <p class="label"><b>{String(projects.length).padStart(2, '0')}</b>{" "}projects{since ? `, ${since} to now` : ''}</p>
     <h1 class="display text-4xl mt-5" data-split>Work</h1>
     <p class="mt-6 text-lg text-steel max-w-[52ch]">
       Platforms for a wetlab-education company, rebuilds for small businesses, and the tooling that lets one engineer
@@ -29,7 +29,7 @@ const groups = CATEGORY_ORDER.map((cat) => ({
     groups.map((g, gi) => (
       <section class="wrap mt-16 md:mt-24" aria-labelledby={`group-${g.cat}`}>
         <h2 id={`group-${g.cat}`} class="label mb-6">
-          <b>{String(gi + 1).padStart(2, '0')}</b>
+          <b>{String(gi + 1).padStart(2, '0')}</b>{" "}
           {g.label}
         </h2>
         <div class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">

@@ -14,6 +14,11 @@ Notable changes to the site and its publishing pipeline. Newest first. Dates are
 ### Fixed
 - Primary nav no longer clips Contact at 320 px: the header row wraps, so the nav drops under the logo when they do not fit. Header and footer links, and the logo, are 32 px tall tap targets (WCAG 1.4.10, 2.5.8) (#105).
 
+## 2026-11-01: poster first on phones and low-data visits
+
+### Changed
+- The home page's two Three.js scenes load only for capable, motion-tolerant desktop visitors. Phone-width viewports, Save-Data, reduced motion, missing WebGL and the new `?lite` override keep the build-time SVG poster and never fetch three.js (about 131 KB gzipped). Reduced-motion and Save-Data visitors now get the poster, not a single rendered frame. One shared rule in `src/lib/scene-gate.ts` gates both the hero and the stack (#99).
+
 ## 2026-10-28: content model restructure
 
 ### Changed

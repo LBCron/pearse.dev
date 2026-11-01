@@ -1,10 +1,13 @@
 /**
  * Environment probes shared by the hero and the stack object.
  *
- * Two query-string overrides exist so the degraded paths can be forced
- * without touching OS settings: `?reduce` (prefers-reduced-motion) and
- * `?nogl` (WebGL unavailable). They are documented in the README.
+ * Three query-string overrides exist so the degraded paths can be forced
+ * without touching OS settings: `?reduce` (prefers-reduced-motion), `?nogl`
+ * (WebGL unavailable) and `?lite` (stay on the poster). They are documented in
+ * the README. The probes here feed the shared rule in `src/lib/scene-gate.ts`.
  */
+import type { SceneProbe } from '../lib/scene-gate';
+
 const params = () => new URLSearchParams(window.location.search);
 
 export function prefersReducedMotion(): boolean {
@@ -21,6 +24,33 @@ export function supportsWebGL(): boolean {
   } catch {
     return false;
   }
+}
+
+/** True when the browser asks for less data. False where `navigator.connection` is undefined. */
+export function saveDataRequested(): boolean {
+  const c = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  return c?.saveData === true;
+}
+
+/** Phone-width viewport: the same < 640 px threshold `isLowEnd()` uses, read from a media query. */
+export function isPhoneViewport(): boolean {
+  return window.matchMedia('(max-width: 639.98px)').matches;
+}
+
+/** `?lite` forces the poster, so the cheap path can be tested on a desktop. */
+export function liteRequested(): boolean {
+  return params().has('lite');
+}
+
+/** Everything `sceneMode()` needs, read in the browser at the moment of decision. */
+export function sceneProbe(): SceneProbe {
+  return {
+    webgl: supportsWebGL(),
+    reducedMotion: prefersReducedMotion(),
+    saveData: saveDataRequested(),
+    phoneViewport: isPhoneViewport(),
+    lite: liteRequested(),
+  };
 }
 
 /** Cheap heuristic for "skip the particle layer". */

@@ -222,9 +222,11 @@ Every article and visible case study page gets its own 1200x630 card at `/og/<sl
 
 ## Motion and degraded paths
 
-- `prefers-reduced-motion: reduce` — the hero and stack render one static frame; no loops, no pointer reaction; the marquee and letter reveal stop.
-- No WebGL — the SVG posters stay in place.
-- Force either path for testing with `?reduce` or `?nogl` on any URL.
+- **The scene gate** (`src/lib/scene-gate.ts`, one pure rule, `tests/scene-gate.test.mjs`). The full 3D scenes (the hero icosahedron and the five-layer stack) are for capable, motion-tolerant desktop visitors. A visitor stays on the build-time SVG poster, and never fetches three.js, when any of these is true: WebGL is unavailable; `prefers-reduced-motion: reduce`; the browser sends Save-Data (`navigator.connection.saveData`, where the API exists); the viewport is narrower than 640 px; or `?lite` is in the URL. Both components build a probe (`sceneProbe()` in `src/scripts/env.ts`) inside their deferral (`onIdle` for the hero, the IntersectionObserver for the stack) and import the scene module only when the rule returns `'gl'`.
+- Reduced-motion and Save-Data visitors get the poster. The poster is not claimed to be pixel-identical to the single frame the scenes used to draw under reduced motion; that is a product decision, not a parity claim.
+- `isLowEnd()` (four cores or fewer, or under 640 px) is separate: it lowers detail on desktop scenes that do load, and is not part of the gate.
+- The marquee and the letter reveal also stop under reduced motion.
+- Force a path for testing with `?reduce`, `?nogl` or `?lite` on any URL.
 
 ## Checks
 

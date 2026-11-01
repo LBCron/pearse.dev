@@ -150,7 +150,7 @@ test('migrate-standalone writes one file per post, preserves markers, and is ide
 // buildFeed: the merge, filter and sort rules on plain fixtures, independent of today's content.
 const NOW = new Date('2026-11-10T12:00:00Z');
 const copy = { linkedin: ' L ', short: ' S ' };
-const article = (id, pubDate, draft = false) => ({ id, title: id, pubDate: new Date(pubDate), draft, tags: ['t'], url: `${SITE.url}/writing/${id}/`, social: copy });
+const article = (id, pubDate, draft = false, extra = {}) => ({ id, title: id, pubDate: new Date(pubDate), draft, tags: ['t'], url: `${SITE.url}/writing/${id}/`, body: 'Body.', social: copy, ...extra });
 const standalone = (id, date, status = 'approved', body = 'Copy.') => ({
   id, title: id, date: new Date(date), pillar: 'Agentic engineering', format: 'Short lesson', visual: 'none', status, short: 'S', body,
 });
@@ -187,6 +187,31 @@ test('buildFeed: an approved standalone post with a verify marker in its body th
   assert.throws(() => buildFeed([], [standalone('s-bad', '2026-11-20', 'approved', 'Copy [VERIFY: check].')], NOW), /s-bad.*\[VERIFY\]/);
   // The same body on a draft is fine: drafts are never in the feed.
   assert.deepEqual(buildFeed([], [standalone('s-bad', '2026-11-20', 'draft', 'Copy [VERIFY: check].')], NOW), []);
+});
+
+test('buildFeed: a non-draft article with a verify marker in its body throws, naming the id', () => {
+  const bad = article('a-bad', '2026-11-01', false, { body: 'Text [VERIFY: check this] more.' });
+  assert.throws(() => buildFeed([bad], [], NOW), /a-bad.*\[VERIFY\].*resolve it or set draft: true/);
+});
+
+test('buildFeed: a future-dated non-draft article with a verify marker throws (the gate for scheduled posts)', () => {
+  const bad = article('a-future-bad', '2026-12-24', false, { body: 'Text [VERIFY: check this] more.' });
+  assert.ok(bad.pubDate > NOW);
+  assert.throws(() => buildFeed([bad], [], NOW), /a-future-bad.*resolve it or set draft: true/);
+});
+
+test('buildFeed: a verify marker only in the article social copy throws', () => {
+  const li = article('a-li', '2026-11-01', false, { social: { linkedin: 'L [VERIFY: x]', short: 'S' } });
+  const sh = article('a-sh', '2026-12-24', false, { social: { linkedin: 'L', short: 'S [VERIFY: x]' } });
+  assert.throws(() => buildFeed([li], [], NOW), /a-li.*resolve it or set draft: true/);
+  assert.throws(() => buildFeed([sh], [], NOW), /a-sh.*resolve it or set draft: true/);
+});
+
+test('buildFeed: a draft article with a verify marker does not throw and is left out', () => {
+  const draft = article('a-draft', '2026-12-24', true, { body: 'Text [VERIFY: x].', social: { linkedin: 'L [VERIFY: x]', short: 'S' } });
+  assert.deepEqual(buildFeed([draft], [], NOW), []);
+  // A clean article beside it still comes through.
+  assert.deepEqual(buildFeed([draft, article('ok', '2026-11-01')], [], NOW).map((e) => e.id), ['ok']);
 });
 
 const project = (id, date, extra = {}) => ({

@@ -229,10 +229,11 @@ Every article and visible case study page gets its own 1200x630 card at `/og/<sl
 - `isLowEnd()` (four cores or fewer, or under 640 px) is separate: it lowers detail on desktop scenes that do load, and is not part of the gate.
 - The marquee and the letter reveal also stop under reduced motion.
 - Force a path for testing with `?reduce`, `?nogl` or `?lite` on any URL.
+- Once the hero script has decided the mode, on every path (no WebGL, gl mounted, import failed), it sets `data-hero-ready` on `#hero-3d`. The attribute exists only at runtime, never in the static HTML, which already ships `data-mode="poster"`. The browser smoke run waits on it to check `?nogl` (poster, no three.js fetched), `?reduce` (with reduced motion emulated: no letter animation, every letter shown) and the default path.
 
 ## Checks
 
-`.github/workflows/check.yml` runs on every pull request and is called by the deploy workflow, whose `build` job needs it green. It runs `npm ci`, `astro check`, the build, the link crawl, the Lighthouse budget, `npm test` and the confidentiality gate.
+`.github/workflows/check.yml` runs on every pull request and is called by the deploy workflow, whose `build` job needs it green. It runs `npm ci`, then in order: check (`astro check`), build, link crawl, Lighthouse, smoke (the browser smoke run below), `npm test`, gate (the confidentiality gate).
 
 The gate (`scripts/gate.mjs`, ADR 0005) scans `dist/`, `src/` and `docs/` case-insensitively for patterns that must never ship. Patterns come from the repository secret `CONFIDENTIAL_PATTERNS`: one regular expression per line (case-insensitive, multiline: `^`/`$` match per line), blank lines and `#` comments ignored. Every file is scanned except known binary types and files containing a NUL byte. The `#n` in the output counts patterns (non-empty, non-comment lines), not file lines. The printed path can itself reveal a name, so keep sensitive words out of filenames. Fork and Dependabot PRs receive no secret and so only get the warning. A missing `dist/` fails the gate: build first. On a hit it prints `<file>: pattern #<n>` and fails; it never prints the matched text. With no patterns it passes with a warning annotation, so the workflow works before the secret exists.
 
@@ -240,7 +241,19 @@ Locally, put the same patterns in `.confidential-patterns` at the repo root (git
 
 ### Lighthouse budget
 
-`npm run lhci` (`lhci autorun`, config in `lighthouserc.json`) serves `dist/` locally and audits `/`, `/work/mts-hub/` and `/writing/why-i-rebuilt-pearse-dev/` three times each (median asserted) with the default mobile preset. Budgets, each an `error` that fails the PR: performance 0.9 or more, accessibility 1.0, best practices 0.95 or more, SEO 1.0. The URL list is hard-coded: bump the article URL when a new article is published. Run locally with `npm run build && npm run lhci` (set `CHROME_PATH` if Chrome is not found). Reports land in `.lighthouseci/` (gitignored); CI uploads them as the `lighthouse-report` artefact, kept 7 days, even on failure (`include-hidden-files` is needed because `.lighthouseci` is a dot-directory). Order in CI: check, build, link crawl, Lighthouse, then `npm test` (which rebuilds `dist` via `pretest`).
+`npm run lhci` (`lhci autorun`, config in `lighthouserc.json`) serves `dist/` locally and audits `/`, `/work/mts-hub/` and `/writing/why-i-rebuilt-pearse-dev/` three times each (median asserted) with the default mobile preset. Budgets, each an `error` that fails the PR: performance 0.9 or more, accessibility 1.0, best practices 0.95 or more, SEO 1.0. The URL list is hard-coded: bump the article URL when a new article is published. Run locally with `npm run build && npm run lhci` (set `CHROME_PATH` if Chrome is not found). Reports land in `.lighthouseci/` (gitignored); CI uploads them as the `lighthouse-report` artefact, kept 7 days, even on failure (`include-hidden-files` is needed because `.lighthouseci` is a dot-directory). Order in CI: check, build, link crawl, Lighthouse, smoke, `npm test` (which rebuilds `dist` via `pretest`), gate.
+
+### Browser smoke run
+
+Every other check reads `dist/` as text. `npm run smoke` (`scripts/smoke/smoke.mjs`) drives the built site in headless Chrome through `playwright-core` (no browser download) and fails on what a visitor would see. It serves `dist/` with a small `node:http` server on `127.0.0.1`, visits every URL in `dist/sitemap-0.xml` plus every redirect page (any page with a meta refresh), and prints both counts. External requests never leave the machine: images get a 1x1 PNG, everything else is aborted. It runs sequentially in one browser:
+
+- **Console:** on every sitemap URL, a console error, an uncaught page error, a failed same-origin request or a same-origin response of 400 or more fails. Console warnings fail too, except a short commented allowlist of software-WebGL noise (warnings only, never errors).
+- **Transitions:** from `/`, each primary Nav link. A skipped cross-document view transition fails, and at least one hop must report `done` (the summary prints the count).
+- **Redirects:** from `/`, an in-page navigation into each redirect page, then its target within 10 s. The page must be revealed with a view transition that finishes before the 1 s meta refresh leaves (#55, #79), with the console clean on both hops. Redirect pages are only ever named `redirect #n -> <target>`: no screenshot is taken on them, and their old paths are scrubbed from every message.
+- **Overflow:** at 360 and 320 px, after `document.fonts` has loaded, no sitemap URL may scroll sideways. A failure names the path, the width and the widest offending element.
+- **Hero:** `/?nogl`, `/?reduce` and `/`, each waiting on `data-hero-ready` (see Motion and degraded paths).
+
+Run it locally with `npm run build && npm run smoke`. Chrome comes from `findChrome()` (`CHROME_PATH`, then `google-chrome`, `chromium` or `chromium-browser` on `PATH`); without one it fails and asks for `CHROME_PATH`. It launches with `--no-sandbox` and SwiftShader, so CI gets software WebGL. `npm run smoke:self` runs it against the fixture in `scripts/smoke/fixture/` (a page that throws, a 400 px element, a clean page) and checks that it fails for exactly those. Neither is part of `npm test`. On failure the run writes `.smoke/report.json` and screenshots (gitignored); CI uploads `.smoke/` as the `smoke-report` artefact, kept 7 days, only when the job fails. Every wait names its signal and has a timeout; there are no fixed sleeps.
 
 ## Requirements
 

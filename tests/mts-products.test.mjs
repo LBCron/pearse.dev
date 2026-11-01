@@ -122,6 +122,7 @@ for (const [slug, to] of Object.entries(MOVED)) {
     assert.match(html, /<meta name="robots" content="noindex"/);
     assert.equal(/<script\b/.test(html), false, 'redirect page must not need JavaScript');
     assert.match(html, /@view-transition\s*\{\s*navigation:\s*auto/, 'redirect page must opt in to view transitions like every other page');
+    assert.match(html, /<link rel="icon" href="\/favicon\.svg"/, 'redirect page must name its icon, or the browser requests a missing /favicon.ico');
     assert.equal(html.replace(/<[^>]+>/g, ' ').includes(`/work/${slug}/`), false, 'redirect page text repeats the old path');
   });
 }

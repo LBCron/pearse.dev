@@ -40,23 +40,34 @@ export function icosahedronLines(extra = '') {
   return lines;
 }
 
+/** Absolute path of `bin` on PATH (`command -v`), or null. */
 const onPath = (bin) => {
   try {
-    execFileSync('command', ['-v', bin], { shell: true, stdio: 'ignore' });
-    return true;
+    const out = execFileSync('command', ['-v', bin], { shell: true, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    return out || null;
   } catch {
-    return false;
+    return null;
   }
 };
 
-/** Chrome binary: $CHROME_PATH, then google-chrome, chromium, chromium-browser on PATH; null if none. */
+/**
+ * Chrome binary as an absolute path: $CHROME_PATH, then google-chrome, chromium,
+ * chromium-browser on PATH; null if none. Absolute because Playwright (scripts/smoke/)
+ * only launches an executable path that exists on disk.
+ */
 export function findChrome() {
   const env = process.env.CHROME_PATH;
   if (env) {
-    if (existsSync(env) || onPath(env)) return env;
+    if (existsSync(env)) return resolve(env);
+    const found = onPath(env);
+    if (found) return found;
     console.warn(`CHROME_PATH=${env} does not exist; looking on PATH instead.`);
   }
-  return ['google-chrome', 'chromium', 'chromium-browser'].find(onPath) ?? null;
+  for (const bin of ['google-chrome', 'chromium', 'chromium-browser']) {
+    const found = onPath(bin);
+    if (found) return found;
+  }
+  return null;
 }
 
 /** Headless screenshot flags for a 1200x630 card. CI runners get --no-sandbox (trusted local HTML only). */

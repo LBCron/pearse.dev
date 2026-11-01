@@ -45,6 +45,8 @@ const quietRedirects = {
           new URL(`work/${slug}/index.html`, dir),
           `<!doctype html><title>Moved to ${rel}</title><meta http-equiv="refresh" content="${REDIRECT_DELAY};url=${rel}">` +
             `<meta name="robots" content="noindex"><link rel="canonical" href="${abs}">` +
+            // Named icon, as on every other page: without it the browser asks for a /favicon.ico that does not exist (a 404 in the console).
+            `<link rel="icon" href="/favicon.svg" type="image/svg+xml">` +
             `<style>@view-transition{navigation:auto}</style>` +
             `<body><a href="${rel}">This page has moved to <code>${rel}</code></a></body>\n`,
         );

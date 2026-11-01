@@ -47,6 +47,21 @@ jobs:
           retention-days: 7
           include-hidden-files: true
           if-no-files-found: ignore
+      # Headless Chrome over dist/ from the Build step: console, view transitions, redirects,
+      # 360/320 px overflow and the hero's degraded paths. The self-test proves it can fail.
+      - name: Smoke self-test
+        run: npm run smoke:self
+      - name: Browser smoke
+        run: npm run smoke
+      - name: Upload smoke report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-report
+          path: .smoke/
+          retention-days: 7
+          include-hidden-files: true
+          if-no-files-found: ignore
       - name: Tests
         run: npm test
         env:

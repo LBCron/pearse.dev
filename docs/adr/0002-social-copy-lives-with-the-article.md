@@ -9,4 +9,4 @@ Every article carries its own LinkedIn and short social copy in frontmatter, and
 
 Standalone posts, which have no article, follow the same rule: they are content in the repository with the same approval and verify-marker rules, not entries typed into the scheduler.
 
-Articles have a build-time guard too: the feed builder throws for any non-draft article, whatever its pubDate, whose body or social copy still has a `[VERIFY` marker.
+Articles have a build-time guard too: the feed builder throws for any non-draft article, whatever its pubDate, whose title, description, body or social copy still has a `[VERIFY` marker.

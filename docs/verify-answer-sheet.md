@@ -73,7 +73,7 @@ Marker text is quoted word for word from the source line. Delete this sheet once
 ## 9. 2026-12-01 · wordpress-to-wagtail-without-breaking-the-business
 
 - File: `src/content/posts/wordpress-to-wagtail-without-breaking-the-business.md`
-- Line: 36
+- Line: 37
 - Date: 2026-12-01
 - Marker: `[VERIFY: client permission to describe the project, even anonymised]`
 - Question: Do you have the client owner's permission to describe this project in the article, even anonymised?
@@ -81,7 +81,7 @@ Marker text is quoted word for word from the source line. Delete this sheet once
 ## 10. 2026-12-01 · wordpress-to-wagtail-without-breaking-the-business
 
 - File: `src/content/posts/wordpress-to-wagtail-without-breaking-the-business.md`
-- Line: 55
+- Line: 56
 - Date: 2026-12-01
 - Marker: `[VERIFY: did the owner start quoting in the new system before cutover?]`
 - Question: Did the owner start quoting in the new system before the public site cut over?
@@ -89,7 +89,7 @@ Marker text is quoted word for word from the source line. Delete this sheet once
 ## 11. 2026-12-08 · replacing-filemaker-with-django
 
 - File: `src/content/posts/replacing-filemaker-with-django.md`
-- Line: 36
+- Line: 37
 - Date: 2026-12-08
 - Marker: `[VERIFY: client permission to describe, even anonymised]`
 - Question: Do you have the client owner's permission to describe this project in the article, even anonymised?
@@ -97,7 +97,7 @@ Marker text is quoted word for word from the source line. Delete this sheet once
 ## 12. 2026-12-08 · replacing-filemaker-with-django
 
 - File: `src/content/posts/replacing-filemaker-with-django.md`
-- Line: 82
+- Line: 83
 - Date: 2026-12-08
 - Marker: `[VERIFY: confirm this happened, or replace with the real lesson]`
 - Question: Did you start from the legacy export's columns and keep its record-per-role habit for longer than you should have? If not, what was the real lesson?

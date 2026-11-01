@@ -3,6 +3,7 @@ title: "An agentic engineering workflow that actually ships"
 description: "One planner model, cheaper delegates by issue size, worktrees enforced by hooks, adversarial PR review and review budgets. What it costs and where it fails."
 pubDate: 2026-11-17
 tags: [agentic-engineering, claude-code, code-review, git]
+project: agentic-workflow
 draft: false
 social:
   linkedin: |

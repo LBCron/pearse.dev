@@ -16,6 +16,7 @@ export async function getFeedEntries(now = new Date()): Promise<FeedEntry[]> {
     posts.map((p) => ({
       id: p.id,
       title: p.data.title,
+      description: p.data.description,
       pubDate: p.data.pubDate,
       draft: p.data.draft,
       tags: p.data.tags,

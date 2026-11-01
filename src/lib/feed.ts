@@ -11,6 +11,7 @@ export interface Copy {
 export interface ArticleInput {
   id: string;
   title: string;
+  description: string;
   pubDate: Date;
   draft: boolean;
   tags: string[];
@@ -90,8 +91,9 @@ const day = (d: Date) => d.toISOString().slice(0, 10);
  * same date articles come first, then standalone posts, then case studies.
  * Standalone posts have no page, so `published` is always true and they carry no `url`.
  * A visible case study's page is always built, so its `published` is always true too.
- * Throws if a non-draft article (published or scheduled, whatever its date), an approved
- * standalone post or a case study still has a verify marker in its copy. Draft articles are exempt.
+ * Throws if a non-draft article (published or scheduled, whatever its date) still has a verify
+ * marker in its title, description, body or social copy, or an approved standalone post or a
+ * case study still has one in its copy. Draft articles are exempt.
  */
 export function buildFeed(
   articles: ArticleInput[],
@@ -103,9 +105,17 @@ export function buildFeed(
     .filter((p) => !p.draft)
     .map((p) => {
       // Not gated on pubDate: ADR 0003 builds a future article only after its date, so
-      // this is the only check that sees its body before it goes live.
-      if (`${p.body}\n${p.social.linkedin}\n${p.social.short}`.includes('[VERIFY')) {
-        throw new Error(`Article "${p.id}" still has a [VERIFY] marker; resolve it or set draft: true.`);
+      // this is the only check that sees its copy before it goes live.
+      const fields: [string, string][] = [
+        ['title', p.title],
+        ['description', p.description],
+        ['body', p.body],
+        ['LinkedIn copy', p.social.linkedin],
+        ['short copy', p.social.short],
+      ];
+      const marked = fields.find(([, text]) => text.includes('[VERIFY'));
+      if (marked) {
+        throw new Error(`Article "${p.id}" is not a draft but still has a [VERIFY] marker in its ${marked[0]}; resolve it or set draft: true.`);
       }
       const date = day(p.pubDate);
       return {

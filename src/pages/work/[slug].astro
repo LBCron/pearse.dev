@@ -43,7 +43,7 @@ const mailto = contactHref(d.title, SITE.email);
   <article class="wrap pt-10 md:pt-16">
     <header class="case-head">
       <p class="label">
-        <b>{caseNumber(i)}</b>{CATEGORY_LABEL[d.category]}<span aria-hidden="true">/</span>{d.period}
+        <b>{caseNumber(i)}</b>{" "}{CATEGORY_LABEL[d.category]}<span aria-hidden="true">/</span>{d.period}
       </p>
       <h1 class="display text-4xl case-title mt-5" style={`--longest: ${longestWord}`} data-split>{d.title}</h1>
       <p class="mt-6 text-lg md:text-xl leading-snug max-w-[46ch]">{d.oneLiner}</p>
@@ -155,7 +155,7 @@ const mailto = contactHref(d.title, SITE.email);
                 {SectionDiagram && (
                   <figure class="case-diagram">
                     <figcaption class="label mb-6">
-                      <b>How it fits together</b>
+                      <b>How it fits together</b>{" "}
                       {s.title}
                     </figcaption>
                     <SectionDiagram />
@@ -172,7 +172,7 @@ const mailto = contactHref(d.title, SITE.email);
       related.length > 0 && (
         <section class="mt-20" aria-labelledby="related-title">
           <h2 id="related-title" class="label mb-4">
-            <b>Writing</b>about this project
+            <b>Writing</b>{" "}about this project
           </h2>
           <div>
             {related.map((post) => (

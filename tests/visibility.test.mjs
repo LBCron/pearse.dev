@@ -98,6 +98,6 @@ test('/work/ index lists only visible projects and its count matches', () => {
   const html = readFileSync('dist/work/index.html', 'utf8');
   const hrefs = new Set(html.match(/href="\/work\/[a-z0-9-]+\/"/g) ?? []);
   assert.equal(hrefs.size, visible);
-  const count = Number(html.match(/<b>(\d+)<\/b>projects/)?.[1]);
+  const count = Number(html.match(/<b>(\d+)<\/b>\s+projects/)?.[1]);
   assert.equal(count, visible);
 });

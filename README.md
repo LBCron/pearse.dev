@@ -94,6 +94,8 @@ sections:                   # optional feature sections, rendered under "What it
 Optional notes in Markdown, rendered under the facts.
 ```
 
+A granted client case study titled by its domain must set `live`, and `tests/client-live-link.test.mjs` enforces it.
+
 MTS is presented as exactly two case studies, **MTS Hub** and **wetlabs.app**. Its smaller tools (WetPack, Opthalyze, Atlas, Cortex, the observability stack) are feature sections of those two, not case studies of their own, and the case studies describe them as features without their old names. The video platform's old name appears nowhere in `dist/`, in any letter case; `tests/mts-products.test.mjs` holds both rules.
 
 When a case study is renamed or folded into another, add its old slug to `MOVED_CASE_STUDIES` in `astro.config.mjs`. The build writes a static redirect page (`<meta http-equiv="refresh">`, canonical, noindex, no JavaScript) at the old `/work/<slug>/`, kept out of the sitemap. The `quietRedirects` integration rewrites those pages so their text never repeats the old slug.

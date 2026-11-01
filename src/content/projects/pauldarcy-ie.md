@@ -25,6 +25,7 @@ hooks:
 visibility: private
 category: client
 clientPermission: granted
+live: https://pauldarcy.ie
 social:
   date: 2027-02-10
   linkedin: |

@@ -29,6 +29,7 @@ hooks:
 visibility: private
 category: client
 clientPermission: granted
+live: https://m-buildz.com
 social:
   date: 2027-02-03
   linkedin: |

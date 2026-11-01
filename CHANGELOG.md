@@ -5,6 +5,7 @@ Notable changes to the site and its publishing pipeline. Newest first. Dates are
 ## Unreleased
 
 ### Added
+- The m-buildz.com and pauldarcy.ie case studies link to their running sites through the existing "Live" link. A test requires every granted client case study titled by a domain to set an https `live` URL on that host and to render it as a Live link (#107).
 - Every case study closes with a contact block: private code offers a walkthrough call, a public repo is linked, and each has a mailto titled "About <project>". The helper lives in `src/lib/contact.ts` (#103).
 
 ### Changed

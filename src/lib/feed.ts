@@ -52,9 +52,22 @@ interface BaseEntry {
   title: string;
   /** YYYY-MM-DD (UTC). */
   date: string;
-  published: boolean;
+  published: true;
   status: 'approved';
   social: Copy;
+}
+
+/**
+ * A scheduled article (non-draft, dated in the future): listed by id and date only.
+ * No title, url, tags or copy until the daily rebuild on its date makes it a full
+ * ArticleEntry. Narrow on `published` before reading any other field.
+ */
+export interface ScheduledArticleEntry {
+  kind: 'article';
+  id: string;
+  /** YYYY-MM-DD (UTC). */
+  date: string;
+  published: false;
 }
 
 export interface ArticleEntry extends BaseEntry {
@@ -80,7 +93,7 @@ export interface ProjectEntry extends BaseEntry {
   url: string;
 }
 
-export type FeedEntry = ArticleEntry | StandaloneEntry | ProjectEntry;
+export type FeedEntry = ArticleEntry | ScheduledArticleEntry | StandaloneEntry | ProjectEntry;
 
 
 const day = (d: Date) => d.toISOString().slice(0, 10);
@@ -89,6 +102,8 @@ const day = (d: Date) => d.toISOString().slice(0, 10);
  * The social feed: every non-draft article (published or scheduled), every approved
  * standalone post and every visible case study with social copy, oldest first; on the
  * same date articles come first, then standalone posts, then case studies.
+ * A scheduled article (not yet published) is a stub of kind, id, date and `published: false`,
+ * so the feed never carries its title or copy before its date.
  * Standalone posts have no page, so `published` is always true and they carry no `url`.
  * A visible case study's page is always built, so its `published` is always true too.
  * Throws if a non-draft article (published or scheduled, whatever its date) still has a verify
@@ -101,7 +116,7 @@ export function buildFeed(
   now = new Date(),
   projects: ProjectInput[] = [],
 ): FeedEntry[] {
-  const a: ArticleEntry[] = articles
+  const a: (ArticleEntry | ScheduledArticleEntry)[] = articles
     .filter((p) => !p.draft)
     .map((p) => {
       // Not gated on pubDate: ADR 0003 builds a future article only after its date, so
@@ -118,6 +133,7 @@ export function buildFeed(
         throw new Error(`Article "${p.id}" is not a draft but still has a [VERIFY] marker in its ${marked[0]}; resolve it or set draft: true.`);
       }
       const date = day(p.pubDate);
+      if (!isPublishedPost(p, now)) return { kind: 'article', id: p.id, date, published: false };
       return {
         kind: 'article',
         id: p.id,
@@ -126,7 +142,7 @@ export function buildFeed(
         date,
         pubDate: date,
         url: p.url,
-        published: isPublishedPost(p, now),
+        published: true,
         status: 'approved',
         tags: p.tags,
         social: { linkedin: p.social.linkedin.trim(), short: p.social.short.trim() },

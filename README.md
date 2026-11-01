@@ -152,8 +152,9 @@ Drafts are excluded everywhere. Posts dated in the future are excluded from the 
 ```json
 [
   { "kind": "article", "id": "…", "slug": "…", "title": "…", "date": "2026-11-03", "pubDate": "2026-11-03",
-    "url": "https://pearse.dev/writing/…/", "published": false, "status": "approved", "tags": ["…"],
+    "url": "https://pearse.dev/writing/…/", "published": true, "status": "approved", "tags": ["…"],
     "social": { "linkedin": "…", "short": "…" } },
+  { "kind": "article", "id": "…", "date": "2026-11-10", "published": false },
   { "kind": "standalone", "id": "p01", "title": "…", "date": "2026-11-04", "pillar": "Agentic engineering",
     "format": "Short lesson", "visual": "none", "published": true, "status": "approved",
     "social": { "linkedin": "…", "short": "…" } },
@@ -163,7 +164,7 @@ Drafts are excluded everywhere. Posts dated in the future are excluded from the 
 ]
 ```
 
-Articles keep their original fields (`slug`, `pubDate`, `url`, `tags`); `id` and `date` are the same values under the shared names. `published` is false for a scheduled article until its page exists, so the scheduler must never link early. Standalone posts have no page and no `url`, and are always `published: true`. A `project` entry's `id` is the case study slug and its `url` the case study page, which always exists for a visible case study, so it is always `published: true`; pending client case studies are never in the feed. The scheduler does not offer `project` entries yet (`isEligible` in `automation/n8n/select.mjs` returns false for any other kind).
+Articles keep their original fields (`slug`, `pubDate`, `url`, `tags`); `id` and `date` are the same values under the shared names. A scheduled article (future-dated, so no page yet) is a stub with exactly `kind`, `id`, `date` and `published: false`: no title, URL, tags or copy until the daily rebuild on its date turns it into the full entry with `published: true`. The id stays in the feed so the scheduler knows it exists, and it must never link a stub. Standalone posts have no page and no `url`, and are always `published: true`. A `project` entry's `id` is the case study slug and its `url` the case study page, which always exists for a visible case study, so it is always `published: true`; pending client case studies are never in the feed. The scheduler does not offer `project` entries yet (`isEligible` in `automation/n8n/select.mjs` returns false for any other kind).
 
 An n8n workflow reads it to schedule posts: LinkedIn gets the `linkedin` copy, and Bluesky and Mastodon optionally get the `short` copy (see [`automation/n8n/README.md`](automation/n8n/README.md)). `/rss.xml` carries the published posts.
 

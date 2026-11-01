@@ -17,6 +17,7 @@ import {
   Vector3,
   WebGLRenderer,
 } from 'three';
+import { hoverForMove, pacingFor } from '../lib/frame-pacing';
 import { devicePixelRatioCapped, isLowEnd, visibleLoop } from './env';
 
 const SNOISE = /* glsl */ `
@@ -222,11 +223,14 @@ export function mountHero(canvas: HTMLCanvasElement, opts: HeroOptions): () => v
     const r = canvas.getBoundingClientRect();
     const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
     const ny = -(((e.clientY - r.top) / r.height) * 2 - 1);
-    target.x = nx;
-    target.y = ny;
     // Only bulge while the pointer is over the canvas; still rotate otherwise.
     const inside = nx >= -1 && nx <= 1 && ny >= -1 && ny <= 1;
-    target.hover = inside ? 1 : 0;
+    const hover = hoverForMove({ pointerType: e.pointerType, inside });
+    // Touch moves count as input for the idle clock (in visibleLoop) but never drive hover or tilt.
+    if (hover === null) return;
+    target.x = nx;
+    target.y = ny;
+    target.hover = hover;
     if (inside) {
       ndc.set(nx, ny, 0.5).unproject(camera);
       const dir = ndc.sub(camera.position).normalize();
@@ -234,7 +238,12 @@ export function mountHero(canvas: HTMLCanvasElement, opts: HeroOptions): () => v
       pointerWorld.copy(camera.position).addScaledVector(dir, t);
     }
   };
-  const onLeave = () => {
+  // The container is pointer-events: none, so the canvas never gets pointerleave. Clear the
+  // bulge when the pointer leaves the document (relatedTarget is null) or the window loses focus.
+  const onOut = (e: PointerEvent) => {
+    if (e.relatedTarget === null) target.hover = 0;
+  };
+  const onBlur = () => {
     target.hover = 0;
   };
 
@@ -273,14 +282,17 @@ export function mountHero(canvas: HTMLCanvasElement, opts: HeroOptions): () => v
   }
 
   window.addEventListener('pointermove', onMove, { passive: true });
-  canvas.addEventListener('pointerleave', onLeave);
-  const stop = visibleLoop(canvas, draw);
+  window.addEventListener('pointerout', onOut, { passive: true });
+  window.addEventListener('blur', onBlur);
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
+  const stop = visibleLoop(canvas, draw, pacingFor({ coarse, lowEnd }));
 
   return () => {
     stop();
     ro.disconnect();
     window.removeEventListener('pointermove', onMove);
-    canvas.removeEventListener('pointerleave', onLeave);
+    window.removeEventListener('pointerout', onOut);
+    window.removeEventListener('blur', onBlur);
     geo.dispose();
     meshMat.dispose();
     renderer.dispose();

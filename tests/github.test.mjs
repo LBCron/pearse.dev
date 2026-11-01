@@ -836,3 +836,17 @@ test('the snapshot keeps avatarUrl as the refresh source, but no page renders it
   assert.match(v.avatarUrl, /^https:\/\/avatars\.githubusercontent\.com\//);
   assert.ok(!readFileSync('dist/index.html', 'utf8').includes(v.avatarUrl));
 });
+
+test('the avatar renders square: its <picture> flex item cannot shrink and both sides are 4rem (#188)', () => {
+  const html = readFileSync('dist/index.html', 'utf8');
+  const css = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n');
+  const rule = (sel) => css.match(new RegExp(`${sel}\\{([^}]*)\\}`))?.[1] ?? '';
+  const picture = rule('\\.gh-who(?:\\[[^\\]]*\\])? picture');
+  assert.match(picture, /(?:^|;)flex:none(?:;|$)|flex-shrink:0/, 'picture does not shrink');
+  const avatar = rule('\\.gh-avatar(?:\\[[^\\]]*\\])?');
+  const width = avatar.match(/(?:^|;)width:([^;]+)/)?.[1];
+  const height = avatar.match(/(?:^|;)height:([^;]+)/)?.[1];
+  assert.ok(width, 'avatar has a width');
+  assert.equal(width, height, 'avatar width equals height');
+  assert.match(avatar, /object-fit:cover/);
+});

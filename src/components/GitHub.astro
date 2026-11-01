@@ -121,9 +121,14 @@ const profile = profileStats(view);
     align-items: center;
     gap: 1rem;
   }
+  /* <picture> is the flex item; without this it shrinks and squashes the avatar (#188). */
+  .gh-who :global(picture) {
+    flex: none;
+  }
   .gh-avatar {
     width: 4rem;
     height: 4rem;
+    object-fit: cover;
     border: 2px solid var(--color-paper);
     filter: grayscale(1);
   }

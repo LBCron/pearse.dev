@@ -204,17 +204,23 @@ const lines = edges.map(([i, j]) => {
   const root = document.getElementById('hero-3d');
   const canvas = root?.querySelector<HTMLCanvasElement>('canvas');
   if (root && canvas) {
+    // `data-hero-ready` marks the settled hero, once the mode is decided on every path. It exists
+    // only at runtime (never in the static HTML), so the browser smoke run (scripts/smoke/) can wait
+    // on it instead of asserting the static `poster` default.
     onIdle(async () => {
       if (sceneMode(sceneProbe()) !== 'gl') {
         root.dataset.mode = 'poster';
+        root.dataset.heroReady = '';
         return;
       }
       try {
         const { mountHero } = await import('../scripts/hero');
         mountHero(canvas, { reduced: prefersReducedMotion() });
         root.dataset.mode = 'gl';
+        root.dataset.heroReady = '';
       } catch {
         root.dataset.mode = 'poster';
+        root.dataset.heroReady = '';
       }
     });
   }

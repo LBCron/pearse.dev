@@ -10,6 +10,7 @@ Notable changes to the site and its publishing pipeline. Newest first. Dates are
 - East Coast Blinds cutover is told one way in the case study, the draft post and the LinkedIn doc: a same-server Apache vhost swap behind Cloudflare, with rollback a config change, described as planned rather than done; a test guards the wording (#106).
 
 ### Added
+- Browser smoke run (`npm run smoke`, in CI after Lighthouse): headless Chrome over `dist/` fails on console errors, skipped view transitions, redirect pages that leave before their incoming transition ends, sideways scroll at 360 and 320 px, and a hero that does not settle on `?nogl`, `?reduce` or the default path. The hero sets `data-hero-ready` once its mode is decided. Redirect pages now name their icon, so they no longer request a missing `/favicon.ico` (#119).
 - The article guard also covers the title and description, and names the field it found the marker in. The Wagtail, FileMaker and agentic-workflow articles link to their case studies, and the case study page picks its related articles with the pure `relatedPosts` helper. A test fails on a `project:` that names no case study (#95).
 - Build-time guard: the feed builder throws for a non-draft article, future-dated or not, with a `[VERIFY` marker in its body or social copy (#92).
 - `docs/verify-answer-sheet.md`: the 22 open markers, one question each, ordered by publish date (#92).

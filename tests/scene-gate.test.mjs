@@ -63,3 +63,18 @@ test('the three.js chunk is still emitted for the desktop path', () => {
   assert.ok(existsSync(dir), 'dist/_astro exists');
   assert.ok(readdirSync(dir).some((f) => /^three\.module\..+\.js$/.test(f)), 'dist/_astro/three.module.*.js');
 });
+
+// The browser smoke run (scripts/smoke/) waits on `data-hero-ready`, so it must be set after every
+// mode decision and never be in the static HTML, where it would make the wait pass at once (#119).
+test('Hero.astro marks the settled hero after each of its three mode decisions', () => {
+  const full = readFileSync('src/components/Hero.astro', 'utf8');
+  const src = full.slice(full.indexOf('<script>'));
+  const decisions = [...src.matchAll(/root\.dataset\.mode = '(poster|gl)';\n\s*root\.dataset\.heroReady = '';/g)];
+  assert.equal(decisions.length, 3, 'no WebGL, gl mounted, import failed: each sets data-hero-ready right after data-mode');
+  assert.equal(src.match(/root\.dataset\.mode =/g)?.length, 3, 'no mode assignment without the ready mark');
+});
+
+test('data-hero-ready exists only at runtime, and the hero chunk the smoke run looks for is emitted', () => {
+  for (const file of ['dist/index.html', 'dist/404.html']) assert.equal(readFileSync(file, 'utf8').includes('data-hero-ready'), false, file);
+  assert.ok(readdirSync(join('dist', '_astro')).some((f) => /^hero\.[\w-]+\.js$/.test(f)), 'dist/_astro/hero.*.js');
+});

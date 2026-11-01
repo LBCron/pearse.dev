@@ -2,7 +2,7 @@
 title: "Verifiable and erasable: certificates under GDPR"
 description: "How MTS Hub keeps attendance certificates publicly verifiable while honouring erasure: snapshot what the credential needs, scrub who it names."
 pubDate: 2027-01-19
-tags: [django, gdpr, privacy, data-modelling]
+tags: [django, privacy, architecture]
 project: "mts-hub"
 draft: true
 social:

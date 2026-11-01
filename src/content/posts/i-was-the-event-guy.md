@@ -2,10 +2,7 @@
 title: I was the event guy
 description: How a downhill skateboarding events calendar, built in WordPress while I was injured, became the reason I went back to study software.
 pubDate: 2027-01-26
-tags:
-  - django
-  - wordpress
-  - personal
+tags: [django, career]
 project: skatedownhills
 draft: true
 social:

@@ -2,7 +2,7 @@
 title: "A second brain needs a schema"
 description: "The Hub's second brain: voice notes over Telegram, self-hosted speech-to-text, an agent filing a Markdown vault, and why the schema gates every write."
 pubDate: 2027-01-12
-tags: [agentic-engineering, self-hosted-ai, knowledge-management, data-modelling]
+tags: [agentic-engineering, self-hosted-ai, architecture]
 project: "mts-hub"
 draft: true
 social:

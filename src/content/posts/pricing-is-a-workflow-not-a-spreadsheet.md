@@ -2,7 +2,7 @@
 title: "Pricing is a workflow, not a spreadsheet"
 description: "Building a pricing and sales pipeline in Django: immutable scenario revisions, a pinned plan, a forecast that never double-counts, and humans at the gates."
 pubDate: 2027-01-05
-tags: [django, architecture, data-modelling, forecasting]
+tags: [django, architecture]
 project: "mts-hub"
 draft: true
 social:

@@ -2,7 +2,7 @@
 title: "Shipping a surgical video platform to a live congress"
 description: "wetlabs.app: FFmpeg and Celery pipelines, a small local phase model chosen over a general VLM, GDPR-first EU hosting, and what a live congress teaches you."
 pubDate: 2026-11-10
-tags: [django, self-hosted-ai, ffmpeg, gdpr]
+tags: [django, self-hosted-ai, privacy]
 project: "wetlabs-app"
 draft: false
 social:

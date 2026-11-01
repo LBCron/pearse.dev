@@ -2,6 +2,7 @@ import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 import { DIAGRAM_NAMES } from './lib/diagrams';
+import { PILLARS, POST_TAGS } from './lib/tags';
 import { publishBlockers } from './lib/verify-marker';
 
 const projects = defineCollection({
@@ -72,7 +73,8 @@ const posts = defineCollection({
     description: z.string().max(160),
     pubDate: z.coerce.date(),
     updatedDate: z.coerce.date().optional(),
-    tags: z.array(z.string()),
+    // Closed vocabulary (src/lib/tags.ts): an unknown tag fails the build.
+    tags: z.array(z.enum(POST_TAGS)).min(1),
     project: z.string().optional(),
     draft: z.boolean().default(false),
     social: z.object({
@@ -91,8 +93,6 @@ const now = defineCollection({
 
 // Standalone posts: social copy with no article (ADR 0002). Body = LinkedIn copy.
 // The first twelve were migrated from a JSON file by scripts/migrate-standalone.mjs; the files are now the source of truth.
-const PILLARS = ['Platform building (Django)', 'Self-hosted AI in production', 'Agentic engineering', 'Career'] as const;
-
 const social = defineCollection({
   loader: glob({ base: './src/content/social', pattern: '**/*.md' }),
   schema: z.object({

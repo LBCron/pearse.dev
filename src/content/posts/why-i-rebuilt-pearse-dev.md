@@ -3,10 +3,7 @@ title: Why I rebuilt pearse.dev
 description: The old site was a template from 2024 that said nothing about the work since. The new one is Astro, Tailwind v4 and Three.js, and it is built to be written to.
 pubDate: 2026-10-24
 updatedDate: 2026-11-01
-tags:
-  - astro
-  - three-js
-  - meta
+tags: [career]
 project: pearse-dev
 draft: false
 social:

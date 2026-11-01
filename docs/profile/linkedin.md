@@ -80,14 +80,14 @@ Positions 2 and 3 go under one company on LinkedIn, so they show as two roles at
 - **Organisation:** Self-employed
 - **Dates:** Aug 2026 – Present
 - **Location:** [VERIFY: location for freelance work]
-- **Description:** 654 characters (limit 2,000)
+- **Description:** 701 characters (limit 2,000)
 
 ```
 Client rebuilds, alongside MTS.
 
 • Rebuilt a small business's WordPress site in Django and Wagtail, with quoting, invoicing, procurement, jobs and a CRM, so that the website and the back office share one database.
-• Cut the new site over with a Cloudflare origin switch and WordPress still running behind it, so that rollback was one DNS change away.
-• Wrote firewall and backup runbooks before go-live so that they existed before the first incident, not after it.
+• Set up the cutover as an Apache vhost swap on the same server, behind Cloudflare, with WordPress left on disk untouched, so that rollback is one config change rather than a restore.
+• Wrote firewall and backup runbooks before cutover so that they existed before the first incident, not after it.
 • Built a Django CRM for a small arts event so that a legacy desktop database only one person could operate gave way to shop sync, registrations, check-in and email campaigns in one system.
 ```
 

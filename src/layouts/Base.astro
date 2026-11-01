@@ -88,9 +88,12 @@ const ogImage = absoluteUrl(image);
     </main>
     <Footer />
     <script>
-      import { onIdle } from '../scripts/env';
-      // GSAP arrives last: after load, after idle, after the hero has had its turn.
+      import { onIdle, prefersReducedMotion } from '../scripts/env';
+      import { shouldLoadMotion } from '../lib/motion-gate';
+      // GSAP arrives last: after load, after idle, after the hero has had its turn. And only
+      // when the page has something to animate and reduced motion is off (`?reduce` included).
       onIdle(() => {
+        if (!shouldLoadMotion(document, prefersReducedMotion())) return;
         import('../scripts/motion');
       }, 2500);
     </script>

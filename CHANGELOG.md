@@ -7,6 +7,10 @@ Notable changes to the site and its publishing pipeline. Newest first. Dates are
 ### Changed
 - East Coast Blinds cutover is told one way in the case study, the draft post and the LinkedIn doc: a same-server Apache vhost swap behind Cloudflare, with rollback a config change, described as planned rather than done; a test guards the wording (#106).
 
+### Added
+- Build-time guard: the feed builder throws for a non-draft article, future-dated or not, with a `[VERIFY` marker in its body or social copy (#92).
+- `docs/verify-answer-sheet.md`: the 22 open markers, one question each, ordered by publish date (#92).
+
 ## 2026-10-28: content model restructure
 
 ### Changed

@@ -20,6 +20,7 @@ export async function getFeedEntries(now = new Date()): Promise<FeedEntry[]> {
       draft: p.data.draft,
       tags: p.data.tags,
       url: absoluteUrl(postPath(p)),
+      body: p.body ?? '',
       social: p.data.social,
     })),
     social.map((p) => ({ id: p.id, ...p.data, body: p.body ?? '' })),

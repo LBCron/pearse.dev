@@ -52,7 +52,7 @@ const jsonLd = {
         <SectionLabel n="01" text="Work" />
         <h2 id="work-title" class="display text-4xl mt-5" data-split>Selected work</h2>
       </div>
-      <a href="/work/" class="link font-mono text-xs uppercase tracking-[0.14em] whitespace-nowrap">All {projects.length} projects</a>
+      <a href="/work/" class="link inline-block py-2 -my-2 font-mono text-xs uppercase tracking-[0.14em] whitespace-nowrap">All {projects.length} projects</a>
     </header>
     <div class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-12">
       {
@@ -115,7 +115,7 @@ const jsonLd = {
         <SectionLabel n="03" text="Writing" />
         <h2 id="writing-title" class="display text-4xl mt-5" data-split>Recent posts</h2>
       </div>
-      <a href="/writing/" class="link font-mono text-xs uppercase tracking-[0.14em] whitespace-nowrap">All posts</a>
+      <a href="/writing/" class="link inline-block py-2 -my-2 font-mono text-xs uppercase tracking-[0.14em] whitespace-nowrap">All posts</a>
     </header>
     {
       posts.length ? (
@@ -132,7 +132,7 @@ const jsonLd = {
         <SectionLabel n="04" text="GitHub" />
         <h2 id="github-title" class="display text-4xl mt-5" data-split>In public</h2>
       </div>
-      <a href={github.url} class="link font-mono text-xs uppercase tracking-[0.14em] whitespace-nowrap">All {github.publicRepos} repos</a>
+      <a href={github.url} class="link inline-block py-2 -my-2 font-mono text-xs uppercase tracking-[0.14em] whitespace-nowrap">All {github.publicRepos} repos</a>
     </header>
     <GitHub view={github} />
   </section>

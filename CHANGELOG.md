@@ -26,6 +26,7 @@ Notable changes to the site and its publishing pipeline. Newest first. Dates are
 - `docs/verify-answer-sheet.md`: the 22 open markers, one question each, ordered by publish date (#92).
 
 ### Fixed
+- The CV PDF is 152 KB instead of 2.6 MB: the print stylesheet hides the fixed screen grain overlay, which Chrome rasterised as a page-sized RGB image plus alpha mask on every page. Text and layout are unchanged (same extracted text; page renders differ only by the removed speckle). Tests hold the PDF to a 500 KB budget with no raster images (#191).
 - Primary nav no longer clips Contact at 320 px: the header row wraps, so the nav drops under the logo when they do not fit. Header and footer links, and the logo, are 32 px tall tap targets (WCAG 1.4.10, 2.5.8) (#105).
 
 ## 2026-11-01: bio and LinkedIn copy match the site

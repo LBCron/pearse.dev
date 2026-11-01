@@ -391,6 +391,11 @@ const next = () => String(++n).padStart(2, '0');
       color: #000 !important;
       font-size: 8.6pt;
     }
+    /* The fixed grain overlay (global.css) prints as a page-sized raster on every page:
+       ~2.4 MB of the PDF and grey speckle on paper. */
+    :global(body)::after {
+      display: none !important;
+    }
     :global(body > header),
     :global(body > footer),
     :global(body > a[href='#main']),

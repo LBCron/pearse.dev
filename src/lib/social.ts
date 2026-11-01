@@ -22,9 +22,10 @@ export async function getFeedEntries(now = new Date()): Promise<FeedEntry[]> {
       tags: p.data.tags,
       url: absoluteUrl(postPath(p)),
       body: p.body ?? '',
+      data: p.data,
       social: p.data.social,
     })),
-    social.map((p) => ({ id: p.id, ...p.data, body: p.body ?? '' })),
+    social.map((p) => ({ id: p.id, ...p.data, body: p.body ?? '', data: p.data })),
     now,
     projects.map((p) => ({
       id: p.data.slug,
@@ -33,6 +34,8 @@ export async function getFeedEntries(now = new Date()): Promise<FeedEntry[]> {
       clientPermission: p.data.clientPermission,
       url: absoluteUrl(`/work/${p.data.slug}/`),
       social: p.data.social,
+      body: p.body ?? '',
+      data: p.data,
     })),
   );
 }

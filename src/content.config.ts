@@ -2,6 +2,7 @@ import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 import { DIAGRAM_NAMES } from './lib/diagrams';
+import { publishBlockers } from './lib/verify-marker';
 
 const projects = defineCollection({
   loader: glob({ base: './src/content/projects', pattern: '**/*.{md,mdx}' }),
@@ -105,12 +106,11 @@ const social = defineCollection({
     short: z.string().max(300),
     note: z.string().optional(),
   }).superRefine((d, ctx) => {
-    // An approved post must have no verify markers left; the body is checked in buildFeed.
+    // Fail fast on an approved post with a verify marker in its frontmatter. Only an early
+    // warning: buildFeed (assertPublishable) is the guarantee, and it checks the body too.
     if (d.status !== 'approved') return;
-    for (const field of ['title', 'short'] as const) {
-      if (d[field].includes('[VERIFY')) {
-        ctx.addIssue({ code: 'custom', path: [field], message: `approved standalone post still has a [VERIFY] marker in ${field}` });
-      }
+    for (const path of publishBlockers('standalone', d, '')) {
+      ctx.addIssue({ code: 'custom', path: path.split('.'), message: `approved standalone post still has a verify marker in ${path}` });
     }
   }),
 });

@@ -1,7 +1,8 @@
 ---
 /**
- * The hero. The H1 is the LCP element and is in the initial HTML, letters
- * pre-split so the rise-in is pure CSS. An SVG poster of the icosahedron,
+ * The hero. The H1 is in the initial HTML, letters pre-split so the rise-in is pure CSS.
+ * LCP is the lede paragraph in Inter, not the H1 (Lighthouse, issue #112), which is why Inter
+ * is the font the base layout preloads. An SVG poster of the icosahedron,
  * computed here at build time with the same rotation, is always in the markup.
  * On idle, `sceneMode()` (src/lib/scene-gate.ts) decides whether to swap in the
  * 3D object: only capable, motion-tolerant desktop visitors get it, and only

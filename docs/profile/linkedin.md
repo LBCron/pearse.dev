@@ -66,7 +66,7 @@ Newest first, as LinkedIn shows them. The timeline has nine rows; they map to fi
 
 | Timeline period | Timeline context | Position |
 |---|---|---|
-| Aug – Oct 2026 | Infrastructure and client work | 1 (client work) and 2 (observability, part of wetlabs.app) |
+| Aug 2026 – Present | Infrastructure and client work | 1 (client work) and 2 (observability, part of wetlabs.app) |
 | Jul 2026 – Present | Platform lead, sole engineer, agent-assisted | 2 |
 | Feb – Oct 2026 | Internal tools, MTS Hub | 3 |
 | Aug 2025 – Present | Software engineer, MTS | 3 |

@@ -21,6 +21,7 @@ const TYPES = {
   '.webp': 'image/webp',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
+  '.pdf': 'application/pdf',
 };
 
 /** Resolve a request path to a file under `root`, or null. Never escapes `root`. */
@@ -37,11 +38,20 @@ export function resolvePath(root, pathname) {
   return existsSync(file) && statSync(file).isFile() ? file : null;
 }
 
-/** Start serving `dir`. Resolves to `{ origin, close }` once listening. */
-export function serve(dir) {
+/**
+ * Start serving `dir`. Resolves to `{ origin, close }` once listening. `overrides` maps an exact
+ * request path to an HTML body served in place of the file (scripts/cv-pdf.mjs serves a rewritten
+ * copy of /cv/ this way, so dist/ itself is never touched).
+ */
+export function serve(dir, overrides = {}) {
   const root = resolve(dir);
   const server = createServer((req, res) => {
     const { pathname } = new URL(req.url ?? '/', 'http://127.0.0.1');
+    if (Object.hasOwn(overrides, pathname)) {
+      res.writeHead(200, { 'content-type': TYPES['.html'] });
+      res.end(req.method === 'HEAD' ? undefined : overrides[pathname]);
+      return;
+    }
     const file = resolvePath(root, pathname);
     if (file) {
       res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' });

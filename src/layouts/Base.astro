@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import archivoWoff2 from '@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2?url';
 import interWoff2 from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
@@ -49,6 +50,7 @@ const ogImage = absoluteUrl(image);
     {/* Inter paints LCP (the lede paragraph), so it is the one preloaded font. Same ?url import as the
         @font-face in global.css, so the preload and the face share one hashed asset. */}
     <link rel="preload" href={interWoff2} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={archivoWoff2} as="font" type="font/woff2" crossorigin />
 
     <meta property="og:type" content={type} />
     <meta property="og:site_name" content="pearse.dev" />

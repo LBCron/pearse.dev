@@ -2,7 +2,7 @@
 // records the LCP element as an Inter paragraph (the hero lede, a case-study lede, a plain <p>),
 // never the Archivo H1. A preload whose href differs from the url() in the inline @font-face makes
 // the browser download the font twice, so the test compares the two strings exactly.
-// Shipped variant: (a) swap, Inter only. No page preloads an Archivo woff2.
+// Shipped variant: (b) both, Inter first, then Archivo.
 // Relies on `npm test`'s pretest build; CSS is inlined, so there is no .css file to read.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -81,14 +81,12 @@ test('every layout page preloads the exact Inter woff2 its @font-face loads', ()
   }
 });
 
-test('variant (a): Inter is the only font preloaded, no page preloads Archivo', () => {
+test('variant (b): Inter is preloaded before Archivo', () => {
   for (const { file, root } of pages) {
     const hrefs = fontPreloads(root).map((p) => p.href);
-    assert.deepEqual(
-      hrefs.filter((h) => /archivo/i.test(h)),
-      [],
-      `${file}: Archivo is preloaded`,
-    );
-    assert.equal(hrefs.length, 1, `${file}: expected exactly one font preload, got ${hrefs}`);
+    const inter = hrefs.findIndex((h) => /inter-latin/.test(h));
+    const archivo = hrefs.findIndex((h) => /archivo/i.test(h));
+    assert.ok(inter >= 0 && archivo >= 0, `${file}: expected both preloads, got ${hrefs}`);
+    assert.ok(inter < archivo, `${file}: Inter must come before Archivo`);
   }
 });

@@ -8,6 +8,8 @@ import {
   callbackData,
   decide,
   findForPosting,
+  hourIn,
+  LAST_DAILY_HOUR,
   parseCommand,
   parseFeedResponse,
   readConfig,
@@ -25,7 +27,8 @@ const node = (name) => workflow.nodes.find((n) => n.name === name);
 
 const AUTHOR = 'urn:li:person:abc123';
 const CHAT = '1000';
-const NOW = new Date('2026-11-03T06:00:00Z');
+const NOW = new Date('2026-11-03T06:00:00Z'); // 07:00 Vienna: not the last daily run
+const LAST_RUN = new Date('2026-11-03T08:00:00Z'); // 09:00 Vienna
 const copy = (s) => ({ linkedin: `${s} long`, short: `${s} short` });
 
 const FEED = [
@@ -237,6 +240,126 @@ test('dry run reports the exact payload with a DRY RUN prefix and never posts', 
   assert.match(feedDown[0].text, /^DRY RUN: Could not read the social feed: HTTP 503/);
 });
 
+// ---- last-run warning: an article dated today that is still unpublished ----
+
+const UNBUILT = 'today-unbuilt';
+const daily = (over = {}) => ({ request: { mode: 'daily' }, config: config(), feed: FEED, state: stateFor({}, false), now: LAST_RUN, ...over });
+const warnings = (out) => out.filter((o) => o.action === 'notify');
+
+test('the last daily run warns about an unpublished article dated today, after the offers', () => {
+  const out = decide(daily());
+  assert.deepEqual(out.map((o) => o.action), ['offer', 'offer', 'notify']);
+  assert.deepEqual(ids(out.slice(0, 2)), ['today-live', 'p01']);
+  assert.equal(warnings(out).length, 1);
+  assert.match(out[2].text, new RegExp(UNBUILT));
+  assert.match(out[2].text, /2026-11-03/);
+  assert.match(out[2].text, /Deploy to GitHub Pages/);
+  assert.match(out[2].text, new RegExp(`/reoffer ${UNBUILT}`));
+  assert.deepEqual(Object.keys(out[2]).sort(), ['action', 'chatId', 'text'], 'a plain notify: no buttons');
+});
+
+test('the warning offers nothing, marks nothing offered and records nothing', () => {
+  const feed = [FEED[2]];
+  const state = stateFor({}, false);
+  const out = decide(daily({ feed, state }));
+  assert.deepEqual(out.map((o) => o.action), ['notify']);
+  assert.deepEqual(state.offered, {});
+  assert.deepEqual(state.record, []);
+});
+
+test('the first daily run (07:00 Vienna) does not warn', () => {
+  const out = decide(daily({ now: NOW }));
+  assert.deepEqual(out.map((o) => o.action), ['offer', 'offer']);
+});
+
+test('a late last run still warns (hour >= the last hour, not ===)', () => {
+  const out = decide(daily({ now: new Date('2026-11-03T10:30:00Z') }));
+  assert.equal(warnings(out).length, 1);
+});
+
+test('the hour is Vienna wall-clock time across daylight saving', () => {
+  assert.equal(hourIn('Europe/Vienna', new Date('2026-07-01T07:00:00Z')), 9);
+  assert.equal(hourIn('Europe/Vienna', new Date('2026-07-01T05:00:00Z')), 7);
+  assert.equal(hourIn('Europe/Vienna', new Date('2026-11-03T08:00:00Z')), 9);
+  assert.equal(hourIn('Europe/Vienna', new Date('2026-06-30T22:00:00Z')), 0, 'midnight is 0, never 24');
+  const summer = { config: config({ today: '2026-07-01' }), feed: [{ kind: 'article', id: 'summer', date: '2026-07-01', published: false }] };
+  assert.equal(warnings(decide(daily({ ...summer, now: new Date('2026-07-01T07:00:00Z') }))).length, 1);
+  assert.equal(warnings(decide(daily({ ...summer, now: new Date('2026-07-01T05:00:00Z') }))).length, 0);
+});
+
+test('two unpublished articles dated today give two warnings, one per id, in feed order', () => {
+  const feed = [
+    { kind: 'article', id: 'second-b', date: '2026-11-03', published: false },
+    FEED[1],
+    { kind: 'article', id: 'first-a', date: '2026-11-03', published: false },
+  ];
+  const out = decide(daily({ feed }));
+  assert.deepEqual(out.map((o) => o.action), ['offer', 'notify', 'notify']);
+  assert.match(out[1].text, /second-b/);
+  assert.match(out[2].text, /first-a/);
+});
+
+test('the warning works on the #111 stub shape without title, url, slug or status', () => {
+  const feed = [{ kind: 'article', id: 'stub-today', date: '2026-11-03', published: false }];
+  const out = decide(daily({ feed }));
+  assert.deepEqual(out.map((o) => o.action), ['notify']);
+  assert.match(out[0].text, /stub-today/);
+  assert.match(out[0].text, /2026-11-03/);
+});
+
+test('only articles dated today warn: not an unapproved standalone post, not another day', () => {
+  const standalone = { kind: 'standalone', id: 'p-draft', title: 'x', date: '2026-11-03', published: false, status: 'draft', social: copy('x') };
+  const otherDay = { kind: 'article', id: 'tomorrow', date: '2026-11-04', published: false };
+  const yesterday = { kind: 'article', id: 'yesterday', date: '2026-11-02', published: false };
+  assert.deepEqual(decide(daily({ feed: [standalone, otherDay, yesterday] })), []);
+});
+
+test('/run, /reoffer, buttons and help do not warn, even at the last run', () => {
+  const feed = [FEED[2]];
+  const run = decide(daily({ feed, request: { mode: 'run' } }));
+  assert.deepEqual(run.map((o) => o.text), ['Nothing new to offer for 2026-11-03.']);
+  const reoffer = decide(daily({ feed, request: { mode: 'reoffer', id: UNBUILT } }));
+  assert.deepEqual(reoffer.map((o) => o.action), ['notify']);
+  assert.match(reoffer[0].text, /not published/);
+  assert.doesNotMatch(reoffer[0].text, /Deploy to GitHub Pages/);
+  const skip = decide(daily({ feed: FEED, request: { mode: 'skip', id: 'p01', queryId: 'q' } }));
+  assert.ok(!skip.some((o) => /Deploy to GitHub Pages/.test(o.text ?? '')));
+  const approve = decide(daily({ feed: FEED, request: { mode: 'approve', id: 'p01', queryId: 'q' } }));
+  assert.ok(!approve.some((o) => /Deploy to GitHub Pages/.test(o.text ?? '')));
+  const help = decide(daily({ request: { mode: 'help' } }));
+  assert.deepEqual(help.map((o) => o.action), ['notify']);
+  assert.doesNotMatch(help[0].text, /Deploy to GitHub Pages/);
+});
+
+test('a feed read failure at the last run gives only the feed error, no warning', () => {
+  const out = decide(daily({ feed: null, feedError: 'HTTP 503' }));
+  assert.deepEqual(out.map((o) => o.text), ['Could not read the social feed: HTTP 503']);
+});
+
+test('in dry run the warning carries the DRY RUN prefix', () => {
+  const out = decide(daily({ config: config({ dryRun: true }) }));
+  assert.match(warnings(out)[0].text, /^DRY RUN: /);
+});
+
+test('the date comes from config.today and the hour from now', () => {
+  // A dry run rehearsing another date: today's feed entry is dated 2026-11-10, the clock says 09:00.
+  const feed = [{ kind: 'article', id: 'rehearsal', date: '2026-11-10', published: false }];
+  const out = decide(daily({ feed, config: config({ dryRun: true, today: '2026-11-10' }) }));
+  assert.match(out[0].text, /rehearsal/);
+});
+
+test('the Daily schedule cron rules are daily on the hour, and the last hour matches the constant', () => {
+  const rules = node('Daily schedule').parameters.rule.interval.map((r) => r.expression);
+  assert.ok(rules.length > 0);
+  const hours = rules.map((expression) => {
+    const m = /^(\d+) (\d+) \* \* \*$/.exec(expression);
+    assert.ok(m, `"${expression}" must be "M H * * *": a different shape needs a conscious change to the last-run rule`);
+    assert.equal(Number(m[1]), 0, `"${expression}" must fire on the hour: a non-zero minute makes "hour >= LAST_DAILY_HOUR" fire before the run it identifies`);
+    return Number(m[2]);
+  });
+  assert.equal(Math.max(...hours), LAST_DAILY_HOUR);
+});
+
 // ---- the exported workflow ----
 
 test('workflow is valid n8n JSON with credentials referenced by name only', () => {
@@ -278,15 +401,26 @@ test('Code nodes embed select.mjs verbatim', () => {
 });
 
 // Runs the Decide and Record result node code with n8n's globals stubbed.
-function runNode(name, { input, upstream = {}, staticData, vars = {} }) {
+// `now` pins the clock: a zero-argument `new Date()` and `Date.now()` return it; dates built from arguments are untouched.
+function runNode(name, { input, upstream = {}, staticData, vars = {}, now = NOW }) {
+  const pinned = now.getTime();
+  class PinnedDate extends Date {
+    constructor(...args) {
+      if (args.length === 0) super(pinned);
+      else super(...args);
+    }
+    static now() {
+      return pinned;
+    }
+  }
   const $ = (n) => {
     if (n === 'Decide' && upstream.Decide) return { isExecuted: true, first: () => ({ json: upstream.Decide[0] }), all: () => upstream.Decide.map((json) => ({ json })) };
     if (!(n in upstream)) throw new Error(`Referenced node is unexecuted: ${n}`);
     return { isExecuted: true, first: () => ({ json: upstream[n] }), all: () => [{ json: upstream[n] }] };
   };
-  const fn = new Function('$input', '$', '$getWorkflowStaticData', '$vars', '$env', node(name).parameters.jsCode);
+  const fn = new Function('$input', '$', '$getWorkflowStaticData', '$vars', '$env', 'Date', node(name).parameters.jsCode);
   const env = new Proxy({}, { get: () => { throw new Error('access to env vars denied'); } });
-  return fn({ first: () => ({ json: input }), all: () => [{ json: input }] }, $, () => staticData, vars, env).map((i) => i.json);
+  return fn({ first: () => ({ json: input }), all: () => [{ json: input }] }, $, () => staticData, vars, env, PinnedDate).map((i) => i.json);
 }
 
 test('embedded Decide node: daily offer, Approve in dry run, then a no-op rerun', () => {
@@ -307,6 +441,29 @@ test('embedded Decide node: daily offer, Approve in dry run, then a no-op rerun'
   const bad = runNode('Decide', { input: feedRes, upstream: { 'Daily schedule': {} }, staticData, vars: { ...vars, TELEGRAM_USER_ID: 'me' } });
   assert.deepEqual(bad.map((o) => [o.action, o.chatId]), [['notify', CHAT]]);
   assert.match(bad[0].text, /configuration error/);
+});
+
+test('embedded Decide node: the warning appears at 09:00 Vienna and not at 07:00, whatever the real time', () => {
+  const vars = { TELEGRAM_CHAT_ID: CHAT, LINKEDIN_AUTHOR_URN: AUTHOR, SCHEDULER_TODAY: '2026-11-03' };
+  const feedRes = { statusCode: 200, body: JSON.stringify(FEED) };
+  const at = (now) => runNode('Decide', { input: feedRes, upstream: { 'Daily schedule': {} }, staticData: {}, vars, now });
+  const last = at(LAST_RUN);
+  assert.deepEqual(last.map((o) => o.action), ['offer', 'offer', 'notify']);
+  assert.match(last[2].text, /^DRY RUN: .*today-unbuilt.*Deploy to GitHub Pages/s);
+  assert.deepEqual(at(NOW).map((o) => o.action), ['offer', 'offer']);
+});
+
+test('embedded Decide node: the date and the hour come from one clock reading', () => {
+  // Without SCHEDULER_TODAY the date comes from the same pinned instant: 09:00 Vienna on 2026-11-03.
+  const vars = { TELEGRAM_CHAT_ID: CHAT, LINKEDIN_AUTHOR_URN: AUTHOR };
+  const feedRes = { statusCode: 200, body: JSON.stringify(FEED) };
+  const out = runNode('Decide', { input: feedRes, upstream: { 'Daily schedule': {} }, staticData: {}, vars, now: LAST_RUN });
+  assert.deepEqual(out.map((o) => o.action), ['offer', 'offer', 'notify']);
+  const decideCode = node('Decide').parameters.jsCode;
+  const shim = decideCode.slice(decideCode.indexOf('// ---- n8n shim'));
+  assert.equal(shim.split('new Date()').length - 1, 1, 'the shim reads the clock once');
+  assert.match(shim, /readConfig\(setting, now\)/);
+  assert.match(shim, /decide\(\{[^}]*\bnow\b[^}]*\}\)/);
 });
 
 test('embedded Record result node records a live post', () => {

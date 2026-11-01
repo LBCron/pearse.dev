@@ -10,6 +10,12 @@
 
 const NETWORK = 'linkedin';
 const TIME_ZONE = 'Europe/Vienna';
+/**
+ * The hour (Europe/Vienna) of the last rule of the Daily schedule node in social-scheduler.json.
+ * A `daily` request at or after this hour warns about today's unpublished articles. Keep it equal to the
+ * largest hour of that cron: tests/scheduler.test.mjs pins the two together.
+ */
+export const LAST_DAILY_HOUR = 9;
 const CALLBACK_MAX_BYTES = 64; // Telegram's limit for inline button callback_data
 const TELEGRAM_MAX_CHARS = 4096; // Telegram's limit for one message
 const LINKEDIN_MAX_CHARS = 3000; // ugcPosts shareCommentary limit
@@ -290,6 +296,12 @@ export function dateIn(timeZone, date) {
   return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
+/** The hour (0 to 23) of `date` in `timeZone`. `hourCycle: 'h23'` never yields 24 at midnight, unlike `hour12: false`. */
+export function hourIn(timeZone, date) {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', hourCycle: 'h23' }).formatToParts(date);
+  return Number(parts.find((p) => p.type === 'hour').value);
+}
+
 /**
  * Settings from n8n variables or environment variables, through `get(name)`.
  * DRY_RUN defaults to true: only the exact value `false` posts for real.
@@ -444,6 +456,7 @@ function run({ request, config, feed, state, now, notify, offer, say, out }) {
     const entries = selectToOffer(feed, config.today, state);
     entries.forEach(offer);
     if (entries.length === 0 && request.mode === 'run') notify(`Nothing new to offer for ${config.today}.`);
+    if (request.mode === 'daily' && hourIn(TIME_ZONE, now) >= LAST_DAILY_HOUR) unpublishedToday(feed, config.today).forEach((e) => notify(unpublishedWarning(e)));
   } else if (request.mode === 'reoffer') {
     // Live: `posted` rows stay, so only the networks that did not post are offered again; an item
     // posted on every network is refused. A dry run starts the item over.
@@ -539,6 +552,20 @@ function postFor(network, entry, config, now) {
 function dryRunText(post) {
   const headers = Object.entries(post.headers).map(([k, v]) => `${k}: ${v}`).join('\n');
   return `would ${post.before ? `${post.before}\n` : ''}POST ${post.url}\n${headers}\n\n${JSON.stringify(post.payload, null, 2)}`;
+}
+
+/**
+ * Articles dated `isoDate` that are not live: the daily rebuild did not publish them. Reads only kind, id,
+ * date and published, so it works on the stub a scheduled article becomes (#111). Standalone posts are not
+ * a pipeline failure and never count.
+ */
+function unpublishedToday(feed, isoDate) {
+  return (feed ?? []).map(normaliseEntry).filter((e) => e.kind === 'article' && e.date === isoDate && e.published !== true);
+}
+
+/** A notify only (ADR 0004): nothing is offered, marked offered, recorded or posted. */
+function unpublishedWarning(e) {
+  return `Article ${e.id} (${e.date}) is still unpublished at the last daily run. Check the Deploy to GitHub Pages workflow. Once it is live, /reoffer ${e.id} offers it.`;
 }
 
 /** The Fetch social feed node's output (full response, text format) as { feed } or { feedError }. */

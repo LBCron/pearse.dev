@@ -28,12 +28,21 @@ jobs:
       - run: npm ci
       - name: Type and content check
         run: npm run check
-      # GITHUB_TOKEN enables the live GitHub section (src/lib/github.ts), so the gate
-      # below scans the same live repo data the deploy publishes.
+      # The only build of the site in CI (#150). Every later step reads this dist/; outside
+      # pull requests the last step uploads it, and deploy.yml publishes that upload as is.
+      # GITHUB_TOKEN enables the live GitHub section (src/lib/github.ts), so the gate below
+      # scans the same live repo data that ships.
       - name: Build
         run: npm run build
         env:
           GITHUB_TOKEN: ${{ github.token }}
+      # Content hash of every non-hidden file in dist/, the set upload-pages-artifact archives.
+      - name: Hash dist
+        id: dist-hash
+        run: |
+          hash=$( (cd dist && find . -type f -not -path '*/.*' -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) | sha256sum | cut -d' ' -f1)
+          echo "dist sha256 after Build: $hash"
+          echo "sha256=$hash" >> "$GITHUB_OUTPUT"
       - name: Link crawl
         run: npm run links
       - name: Lighthouse budget
@@ -62,11 +71,28 @@ jobs:
           retention-days: 7
           include-hidden-files: true
           if-no-files-found: ignore
+      # test:ci has no pretest hook, so the tests read the dist/ above and never rebuild it.
       - name: Tests
-        run: npm test
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+        run: npm run test:ci
       - name: Confidentiality gate
         run: npm run gate
         env:
           CONFIDENTIAL_PATTERNS: ${{ secrets.CONFIDENTIAL_PATTERNS }}
+      # Any new check goes above this step. Fails if any step since Build changed dist/.
+      - name: Verify dist unchanged
+        env:
+          EXPECTED: ${{ steps.dist-hash.outputs.sha256 }}
+        run: |
+          hash=$( (cd dist && find . -type f -not -path '*/.*' -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) | sha256sum | cut -d' ' -f1)
+          echo "dist sha256 before upload: $hash"
+          if [ -z "$EXPECTED" ] || [ "$hash" != "$EXPECTED" ]; then
+            echo "::error::dist/ changed after Build (expected $EXPECTED, got $hash)"
+            exit 1
+          fi
+      # Pull requests check but publish nothing. Under workflow_call the event is the
+      # caller's push, schedule or dispatch, so deploy.yml runs get the github-pages artifact.
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist

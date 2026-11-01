@@ -24,7 +24,8 @@
     "smoke": "node scripts/smoke/smoke.mjs",
     "smoke:self": "node --test scripts/smoke/self.test.mjs",
     "pretest": "npm run build",
-    "test": "node --test \"tests/**/*.test.mjs\""
+    "test": "node --test \"tests/**/*.test.mjs\"",
+    "test:ci": "node --test \"tests/**/*.test.mjs\""
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",

@@ -16,26 +16,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # check builds dist/ once, gates and tests it, and uploads it as the github-pages
+  # artifact of this run. deploy publishes that artifact: there is no second build.
   check:
     uses: ./.github/workflows/check.yml
     secrets: inherit
 
-  build:
-    needs: check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-      - name: Install, build, and upload the site
-        uses: withastro/action@v6
-        with:
-          node-version: 22.23.4
-        env:
-          # Live GitHub section: profile, repos and the contribution calendar (GraphQL needs a token).
-          GITHUB_TOKEN: ${{ github.token }}
-
   deploy:
-    needs: build
+    needs: check
+    # The github-pages environment only accepts master. A dispatch on another branch runs
+    # check (and its upload) and skips this job instead of failing it.
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
       pages: write

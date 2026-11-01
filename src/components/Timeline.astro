@@ -60,7 +60,7 @@ const rows: { period: string; context: string; href?: string; headline: string }
     rows.map((r, i) => (
       <li class:list={['timeline-row', i === rows.length - 1 && 'timeline-now']}>
         <span class="font-mono text-xs uppercase tracking-[0.12em] text-lime">{r.period}</span>
-        <span class="text-sm text-steel">{r.href ? <a class="link" href={r.href}>{r.context}</a> : r.context}</span>
+        <span class="text-sm text-steel">{r.href ? <a class="link inline-block py-1 -my-1" href={r.href}>{r.context}</a> : r.context}</span>
         <span class="text-base">{r.headline}</span>
       </li>
     ))

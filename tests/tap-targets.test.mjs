@@ -117,3 +117,11 @@ test('the inlined CSS defines the negative-margin rules that keep those links la
   assert.ok(cv.includes('.py-0\\.5{padding-block:calc(var(--spacing) * .5)}'), 'cv py-0.5');
   assert.ok(cv.includes('.-my-0\\.5{margin-block:calc(var(--spacing) * -.5)}'), 'cv -my-0.5');
 });
+
+test('the RSS link in the /writing/ label is a layout-neutral py-2 target (#198)', () => {
+  const label = section(read('dist/writing/index.html'), '<p class="label"', '</p>');
+  const links = anchors(label);
+  assert.equal(links.length, 1, 'one link in the label');
+  assert.equal(links[0].match(/href="([^"]*)"/)?.[1], '/rss.xml');
+  assertNeutralTarget(links[0], 'writing label RSS', '2');
+});

@@ -147,3 +147,23 @@ test('redirect pages stay out of the sitemap', () => {
   const sitemap = readFileSync('dist/sitemap-0.xml', 'utf8');
   for (const slug of Object.keys(MOVED)) assert.equal(sitemap.includes(`/work/${slug}/`), false, slug);
 });
+
+// ADR 0005 records the legacy-stub exception (#199). A stub added without a line there fails here.
+test('ADR 0005 names every redirect stub, so the retired-name exception stays on record (#199)', () => {
+  const adr = readFileSync('docs/adr/0005-confidentiality-denylist-outside-the-repo.md', 'utf8');
+  for (const slug of Object.keys(MOVED)) assert.ok(adr.includes(`/work/${slug}/`), `ADR 0005 does not name /work/${slug}/`);
+});
+
+test('the astro.config.mjs stub list and the MOVED list in this file agree (#199)', () => {
+  const cfg = readFileSync('astro.config.mjs', 'utf8');
+  const block = cfg.match(/const MOVED_CASE_STUDIES = \{([\s\S]*?)\n\};/)[1];
+  const slugs = [...block.matchAll(/^\s*'?([a-z0-9-]+)'?:\s*'/gm)].map((m) => m[1]);
+  assert.deepEqual(slugs.sort(), Object.keys(MOVED).sort());
+});
+
+test('an unknown /work/ path has no redirect stub and the 404 page is built (#199)', () => {
+  assert.equal(existsSync('dist/404.html'), true, 'dist/404.html');
+  assert.equal(existsSync('dist/work/never-existed/index.html'), false);
+  const stubs = files('dist/work').filter((f) => /<meta\s+http-equiv="refresh"/.test(readFileSync(f, 'utf8')));
+  assert.equal(stubs.length, Object.keys(MOVED).length, 'redirect stubs under dist/work');
+});

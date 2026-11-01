@@ -2,10 +2,12 @@
 title: Why I rebuilt pearse.dev
 description: The old site was a template from 2024 that said nothing about the work since. The new one is Astro, Tailwind v4 and Three.js, and it is built to be written to.
 pubDate: 2026-10-24
+updatedDate: 2026-11-01
 tags:
   - astro
   - three-js
   - meta
+project: pearse-dev
 draft: false
 social:
   linkedin: |
@@ -28,6 +30,8 @@ So I replaced it. Here is what changed and why.
 The site is Astro. Everything is HTML at build time, served from GitHub Pages behind Cloudflare. There is no runtime, no framework island, no hydration. The two interactive pieces — the hero and a small 3D object in the About section — are plain `<script>` tags that Astro bundles and loads after first paint.
 
 I chose Astro over writing the HTML by hand for one reason: content collections. Projects and posts are Markdown files with a typed schema. Adding a case study is a file. Adding a post is a file. The build fails if a field is missing. That is the whole content management system and it is enough.
+
+*Update, November 2026: the site now has five typed collections (projects, posts, now, social and cv), not the two described here. The [pearse.dev case study](/work/pearse-dev/) has the current build.*
 
 ## Tailwind v4, configured in CSS
 

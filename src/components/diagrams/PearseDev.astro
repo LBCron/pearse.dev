@@ -1,0 +1,83 @@
+---
+import Diagram from './Diagram.astro';
+import type { Layout } from './layout';
+
+// Two lanes: the site build (push or daily schedule -> check job -> build -> Pages behind
+// Cloudflare) and social posting (feed -> n8n -> Telegram approval -> networks).
+// SVG text is scanned for hostnames (tests/diagrams.test.mjs): say "site", never the domain.
+const wide: Layout = {
+  w: 1030,
+  h: 390,
+  groups: [
+    { x: 8, y: 30, w: 1014, h: 180, label: 'Site build' },
+    { x: 8, y: 240, w: 1014, h: 130, label: 'Social posting' },
+  ],
+  nodes: [
+    { id: 'content', x: 20, y: 60, w: 140, h: 72, kind: 'store', label: 'Markdown', sub: ['five typed', 'collections'] },
+    { id: 'rebuild', x: 20, y: 150, w: 140, h: 44, label: 'Daily rebuild', sub: ['06:00 UTC'] },
+    { id: 'check', x: 220, y: 60, w: 170, h: 72, label: 'Check job', sub: ['type check · build', 'links · Lighthouse', 'tests · gate'] },
+    { id: 'build', x: 450, y: 60, w: 150, h: 72, label: 'Astro build', sub: ['static HTML', 'OG cards'] },
+    { id: 'pages', x: 660, y: 60, w: 150, h: 72, label: 'GitHub Pages', sub: ['static hosting'] },
+    { id: 'cf', x: 870, y: 60, w: 140, h: 72, label: 'Cloudflare', sub: ['in front of Pages'] },
+    { id: 'feed', x: 20, y: 270, w: 140, h: 72, kind: 'store', label: 'Social feed', sub: ['JSON, built', 'with the site'] },
+    { id: 'n8n', x: 220, y: 270, w: 170, h: 72, label: 'n8n', sub: ['self-hosted', 'scheduled'] },
+    { id: 'telegram', x: 450, y: 270, w: 150, h: 72, kind: 'gate', label: 'Telegram', sub: ['human approval', 'approve · skip'] },
+    { id: 'linkedin', x: 660, y: 270, w: 150, h: 72, kind: 'actor', label: 'LinkedIn' },
+    { id: 'others', x: 870, y: 270, w: 140, h: 72, kind: 'actor', optional: true, label: 'Bluesky', sub: ['Mastodon', 'when configured'] },
+  ],
+  edges: [
+    { from: 'content', to: 'check', fromOff: -16, toOff: -16, flow: true, label: 'push' },
+    { from: 'rebuild', to: 'check', toOff: 20 },
+    { from: 'check', to: 'build', flow: true },
+    { from: 'build', to: 'pages', flow: true, label: 'deploy' },
+    { from: 'pages', to: 'cf', flow: true },
+    { from: 'build', to: 'feed', fromSide: 'b', toSide: 't', via: [[525, 225], [90, 225]], label: 'emits', labelAt: [310, 217] },
+    { from: 'feed', to: 'n8n', flow: true, label: 'read' },
+    { from: 'n8n', to: 'telegram', flow: true, label: 'offer' },
+    { from: 'telegram', to: 'linkedin', flow: true, label: 'approved' },
+    { from: 'telegram', to: 'others', fromSide: 'b', toSide: 'b', via: [[525, 356], [940, 356]], optional: true },
+  ],
+};
+
+const narrow: Layout = {
+  w: 360,
+  h: 790,
+  groups: [
+    { x: 10, y: 24, w: 340, h: 400, label: 'Site build' },
+    { x: 10, y: 450, w: 340, h: 324, label: 'Social posting' },
+  ],
+  nodes: [
+    { id: 'content', x: 20, y: 40, w: 150, h: 58, kind: 'store', label: 'Markdown', sub: ['typed collections'] },
+    { id: 'rebuild', x: 190, y: 40, w: 150, h: 58, label: 'Daily rebuild', sub: ['06:00 UTC'] },
+    { id: 'check', x: 20, y: 140, w: 320, h: 72, label: 'Check job', sub: ['type check · build · links', 'Lighthouse · tests · gate'] },
+    { id: 'build', x: 20, y: 250, w: 150, h: 58, label: 'Astro build', sub: ['static HTML'] },
+    { id: 'pages', x: 190, y: 250, w: 150, h: 58, label: 'GitHub Pages', sub: ['static hosting'] },
+    { id: 'cf', x: 190, y: 350, w: 150, h: 58, label: 'Cloudflare', sub: ['in front of Pages'] },
+    { id: 'feed', x: 20, y: 470, w: 150, h: 58, kind: 'store', label: 'Social feed', sub: ['JSON'] },
+    { id: 'n8n', x: 190, y: 470, w: 150, h: 58, label: 'n8n', sub: ['self-hosted'] },
+    { id: 'telegram', x: 190, y: 570, w: 150, h: 72, kind: 'gate', label: 'Telegram', sub: ['human approval', 'approve · skip'] },
+    { id: 'linkedin', x: 20, y: 690, w: 150, h: 58, kind: 'actor', label: 'LinkedIn' },
+    { id: 'others', x: 190, y: 690, w: 150, h: 72, kind: 'actor', optional: true, label: 'Bluesky', sub: ['Mastodon', 'when configured'] },
+  ],
+  edges: [
+    { from: 'content', to: 'check', toOff: -85, flow: true, label: 'push' },
+    { from: 'rebuild', to: 'check', toOff: 85 },
+    { from: 'check', to: 'build', fromOff: -85, flow: true },
+    { from: 'build', to: 'pages', flow: true },
+    { from: 'pages', to: 'cf', flow: true },
+    { from: 'build', to: 'feed', label: 'emits' },
+    { from: 'feed', to: 'n8n', flow: true },
+    { from: 'n8n', to: 'telegram', flow: true, label: 'offer' },
+    { from: 'telegram', to: 'linkedin', fromSide: 'b', fromOff: -40, toSide: 't', flow: true, label: 'approved' },
+    { from: 'telegram', to: 'others', fromOff: 0, optional: true },
+  ],
+};
+---
+
+<Diagram
+  id="diagram-pearse-dev"
+  title="Site build and social posting"
+  desc="Two lanes. In the site build, a push of Markdown content in five typed collections, or the daily rebuild at 06:00 UTC, starts the check job: type check, build, link check, Lighthouse, tests and the confidentiality gate. Only when it passes does the Astro build produce the static HTML and Open Graph cards and deploy them to GitHub Pages, which is served behind Cloudflare. The build also emits a machine-readable social feed. In social posting, self-hosted n8n reads that feed on a schedule and offers each post on Telegram for a human to approve or skip. Approved copy goes to LinkedIn, and to Bluesky and Mastodon when those are configured."
+  wide={wide}
+  narrow={narrow}
+/>

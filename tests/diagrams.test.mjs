@@ -21,6 +21,7 @@ const DIAGRAMS = {
   'wetlabs-app': ['diagram-wetlabs-app', 'diagram-observability'],
   'east-coast-blinds': ['diagram-east-coast-blinds'],
   'dublin-plein-air': ['diagram-dublin-plein-air'],
+  'pearse-dev': ['diagram-pearse-dev'],
 };
 // Case studies with no `diagram:` key.
 const WITHOUT = ['agentic-workflow', 'mx-creative-keypad'];

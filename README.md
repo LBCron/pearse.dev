@@ -51,6 +51,8 @@ Posts follow a third rule: `draft: true` or a future `pubDate` keeps an article 
 
 The two-products rule, the permission flags and the reasoning are in [ADR 0006](docs/adr/0006-mts-is-two-products-and-client-work-is-gated.md). Source briefs used to draft content (writing, design and research notes) are kept privately outside the repository; nothing here links to them. Anything that would name a customer, address, credential or figure is stopped by the gate (see Checks).
 
+Every visible case study closes with a contact block (after "Writing about this project", before Previous/Next; `src/lib/contact.ts`) with a mailto link titled "About <project>" and three variants: `private` offers a walkthrough call and links nothing, `repo` (public with `repo`) links that repo, `public` (no `repo`) is the mailto alone. `tests/case-contact.test.mjs` asserts it on every page.
+
 To add a case study: pick the category, create `src/content/projects/<slug>.md` as under Add a project, set `clientPermission` explicitly if it is a client, run `npm run build && npm run gate && npm test`. For an MTS tool, add a `sections` entry to MTS Hub or wetlabs.app instead. To add a post: see Add a post. Changes are logged in [`CHANGELOG.md`](CHANGELOG.md).
 
 ### Add a project

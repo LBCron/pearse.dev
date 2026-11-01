@@ -4,6 +4,9 @@ Notable changes to the site and its publishing pipeline. Newest first. Dates are
 
 ## Unreleased
 
+### Added
+- Every case study closes with a contact block: private code offers a walkthrough call, a public repo is linked, and each has a mailto titled "About <project>". The helper lives in `src/lib/contact.ts` (#103).
+
 ### Changed
 - `/social.json` lists a scheduled article as a stub of `kind`, `id`, `date` and `published: false`, with no title, URL, tags or copy until its date; the feed type now narrows on `published` (#111).
 - Ongoing MTS periods read "– Present" instead of a frozen "Oct 2026": the MTS Hub, wetlabs.app and agentic-workflow case studies and the two matching home timeline rows. Finished phases and the client case studies keep their end dates. The project schema rejects a "Present" period without a start year (#93).

@@ -9,7 +9,11 @@ const projects = defineCollection({
     title: z.string(),
     slug: z.string().regex(/^[a-z0-9-]+$/),
     oneLiner: z.string(),
-    period: z.string(),
+    // An ongoing period is "<start with a four-digit year> – Present" (en dash, single spaces),
+    // so the CV's start-only display and the /work/ start-year parser keep their year.
+    period: z.string().refine((v) => !/present/i.test(v) || /^(?:[A-Z][a-z]{2} )?(?:19|20)\d{2} – Present$/.test(v), {
+      message: 'an ongoing period must read "Mon YYYY – Present" or "YYYY – Present"',
+    }),
     role: z.string().default('Sole engineer'),
     stack: z.array(z.string()),
     featured: z.boolean().default(false),

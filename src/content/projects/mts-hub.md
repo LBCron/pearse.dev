@@ -2,7 +2,7 @@
 title: MTS Hub
 slug: mts-hub
 oneLiner: Operations platform and system of record for a wetlab-education company — congresses, courses, contacts, bookings, packing, inventory, staffing, tickets, certificates, comms.
-period: Jul – Oct 2026
+period: Jul 2026 – Present
 role: Platform lead, sole engineer (agent-assisted)
 stack:
   - Python 3.12

@@ -31,7 +31,8 @@ const escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 // InvalidStateError when a transition from an opted-in page lands on the redirect), no JavaScript. Only the URL path itself still holds the old slug.
 // The refresh waits 1 second, not 0: an immediate refresh starts a new navigation while the incoming
 // cross-document view transition is still running, which logs "AbortError: Transition was skipped" (#79).
-// The page keeps the opt-in, since dropping it brings back the #55 InvalidStateError.
+// The page keeps the opt-in, since dropping it brings back the #55 InvalidStateError. It sits inside a
+// no-preference media query, like the shared layout's (#136); this page does not render through that layout.
 const REDIRECT_DELAY = 1;
 /** @type {import('astro').AstroIntegration} */
 const quietRedirects = {
@@ -47,7 +48,9 @@ const quietRedirects = {
             `<meta name="robots" content="noindex"><link rel="canonical" href="${abs}">` +
             // Named icon, as on every other page: without it the browser asks for a /favicon.ico that does not exist (a 404 in the console).
             `<link rel="icon" href="/favicon.svg" type="image/svg+xml">` +
-            `<style>@view-transition{navigation:auto}</style>` +
+            // Reduced motion: no opt-in, and any transition that still runs finishes instantly (#136).
+            `<style>@media (prefers-reduced-motion:no-preference){@view-transition{navigation:auto}}` +
+            `@media (prefers-reduced-motion:reduce){::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}}</style>` +
             `<body><a href="${rel}">This page has moved to <code>${rel}</code></a></body>\n`,
         );
       }

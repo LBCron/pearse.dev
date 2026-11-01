@@ -493,4 +493,10 @@
   .card {
     transition: none;
   }
+  /* Page-to-page transitions: the layout only opts in under no-preference; this finishes any that still run. */
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
 }

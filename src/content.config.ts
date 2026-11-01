@@ -77,7 +77,7 @@ const posts = defineCollection({
     draft: z.boolean().default(false),
     social: z.object({
       linkedin: z.string(),
-      short: z.string(),
+      short: z.string().max(300),
     }),
   }),
 });

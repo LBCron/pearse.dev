@@ -15,7 +15,7 @@ const TIME_ZONE = 'Europe/Vienna';
  * A `daily` request at or after this hour warns about today's unpublished articles. Keep it equal to the
  * largest hour of that cron: tests/scheduler.test.mjs pins the two together.
  */
-export const LAST_DAILY_HOUR = 9;
+export const LAST_DAILY_HOUR = 7;
 const CALLBACK_MAX_BYTES = 64; // Telegram's limit for inline button callback_data
 const TELEGRAM_MAX_CHARS = 4096; // Telegram's limit for one message
 const LINKEDIN_MAX_CHARS = 3000; // ugcPosts shareCommentary limit

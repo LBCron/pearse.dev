@@ -8,6 +8,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readPdf, scanStrings } from '../scripts/pdf-text.mjs';
+import { OLD_NAME, OLD_NAMES } from './lib/old-names.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 process.chdir(ROOT);
@@ -39,9 +40,6 @@ function files(dir, out = []) {
   }
   return out;
 }
-
-// The old product name, in any letter case. Its slug survives only as the path of its redirect page.
-const OLD_NAME = /ophthix/i;
 
 const decode = (s) => s.replace(/&#x2F;|&#47;/g, '/').replace(/&amp;/g, '&');
 
@@ -109,7 +107,6 @@ test('every social.json entry keeps the old product name out of its title and sh
 // Drafts never reach dist/, so the copy is checked at the source too: every post and social
 // entry (draft or not), the CV, and the LinkedIn and bio copy in docs/profile (#43).
 const COPY_DIRS = ['src/content/posts', 'src/content/social', 'src/content/cv', 'docs/profile'];
-const OLD_NAMES = /ophthix|WetPack|Opthalyze|\bAtlas\b|\bCortex\b/i;
 
 test('posts, social copy, CV and profile copy use neither the old product name nor the folded tool names', () => {
   for (const file of COPY_DIRS.flatMap((d) => files(d)).filter((f) => /\.mdx?$/.test(f))) {

@@ -286,6 +286,7 @@ Node 22.23.4 or newer (`.nvmrc`). Astro 7 refuses older 22.x builds, including t
 ## Docs
 
 - **Decisions:** [`docs/adr/`](docs/adr/) (0001 to 0006) and [`GLOSSARY.md`](GLOSSARY.md).
+- **Agent entry point:** [`CLAUDE.md`](CLAUDE.md) (house rules for agents, linking to the docs above).
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md).
 - **Profile copy:** [`docs/profile/linkedin.md`](docs/profile/linkedin.md) (LinkedIn headline, About, Experience, Featured, Skills, paste order) and [`docs/profile/bio.md`](docs/profile/bio.md) (50, 100 and 300-word speaker bios), derived from the case studies.
 

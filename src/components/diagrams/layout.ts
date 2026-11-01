@@ -42,6 +42,8 @@ export interface DiagramEdge {
   /** Arrowheads at both ends. */
   both?: boolean;
   optional?: boolean;
+  /** A fallback path that is not taken: steel, never animated, its own dash. Needs a label; never also `flow`. */
+  rollback?: boolean;
 }
 
 export interface DiagramGroup {
@@ -155,6 +157,8 @@ export function prepare(layout: Layout, where: string) {
   }
 
   const edges: PreparedEdge[] = layout.edges.map((e) => {
+    if (e.rollback && e.flow) throw new Error(`${where}: edge ${e.from} -> ${e.to} is both rollback and flow`);
+    if (e.rollback && !e.label) throw new Error(`${where}: rollback edge ${e.from} -> ${e.to} needs a label`);
     const a = byId.get(e.from);
     const b = byId.get(e.to);
     if (!a || !b) throw new Error(`${where}: edge ${e.from} -> ${e.to} names an unknown node`);

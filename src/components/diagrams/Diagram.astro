@@ -4,7 +4,7 @@
  * holding two nested layouts. CSS shows `wide` from 64rem up and `narrow`
  * below it, so phones get a stacked drawing instead of a shrunken one.
  * Colours and fonts come from the site tokens; flow edges animate only when
- * the visitor has not asked for reduced motion.
+ * the visitor has not asked for reduced motion; rollback edges never animate.
  */
 import { EDGE_SIZE, LABEL_SIZE, SUB_SIZE, prepare, type Layout } from './layout';
 
@@ -60,7 +60,7 @@ const arrowLime = `url(#${id}-arrow-lime)`;
         {v.edges.map((e) => (
           <path
             d={e.d}
-            class:list={['edge', { 'edge-flow': e.flow, 'edge-optional': e.optional }]}
+            class:list={['edge', { 'edge-flow': e.flow, 'edge-optional': e.optional, 'edge-rollback': e.rollback }]}
             marker-end={e.flow ? arrowLime : arrow}
             marker-start={e.both ? (e.flow ? arrowLime : arrow) : undefined}
           />
@@ -172,6 +172,11 @@ const arrowLime = `url(#${id}-arrow-lime)`;
   }
   .edge-optional {
     stroke-dasharray: 4 4;
+  }
+  /* A path kept ready but not taken: steel, static, dash-dot so it reads as neither opt-in nor the moving flow. */
+  .edge-rollback {
+    stroke: var(--color-steel);
+    stroke-dasharray: 12 4 2 4;
   }
   .arrow {
     fill: var(--color-steel);

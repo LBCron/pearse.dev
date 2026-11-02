@@ -4,6 +4,8 @@ description: "How MTS Hub keeps attendance certificates publicly verifiable whil
 pubDate: 2027-01-19
 tags: [django, privacy, architecture]
 project: "mts-hub"
+series: mts-hub
+seriesOrder: 4
 draft: true
 social:
   linkedin: |

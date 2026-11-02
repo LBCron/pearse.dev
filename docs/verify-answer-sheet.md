@@ -105,7 +105,7 @@ Marker text is quoted word for word from the source line. Delete this sheet once
 ## 13. 2027-01-05 · pricing-is-a-workflow-not-a-spreadsheet
 
 - File: `src/content/posts/pricing-is-a-workflow-not-a-spreadsheet.md`
-- Line: 74
+- Line: 76
 - Date: 2027-01-05
 - Marker: `[VERIFY: is automatic sending still off for the digest, so each one waits for approval?]`
 - Question: Is automatic sending of the weekly digest still off, so each digest waits for approval?
@@ -113,7 +113,7 @@ Marker text is quoted word for word from the source line. Delete this sheet once
 ## 14. 2027-01-05 · pricing-is-a-workflow-not-a-spreadsheet
 
 - File: `src/content/posts/pricing-is-a-workflow-not-a-spreadsheet.md`
-- Line: 82
+- Line: 84
 - Date: 2027-01-05
 - Marker: `[VERIFY: is the pipeline dashboard in regular use yet, or still being adopted?]`
 - Question: Is the pipeline dashboard in regular use yet, or still being adopted?
@@ -121,7 +121,7 @@ Marker text is quoted word for word from the source line. Delete this sheet once
 ## 15. 2027-01-12 · a-second-brain-needs-a-schema
 
 - File: `src/content/posts/a-second-brain-needs-a-schema.md`
-- Line: 70 (marker 1 of 2 on this line)
+- Line: 72 (marker 1 of 2 on this line)
 - Date: 2027-01-12
 - Marker: `[VERIFY: is the Telegram trigger leg live end to end, with a real voice note and bot reply?]`
 - Question: Is the Telegram trigger leg live end to end, with a real voice note in and a bot reply out?
@@ -129,7 +129,7 @@ Marker text is quoted word for word from the source line. Delete this sheet once
 ## 16. 2027-01-12 · a-second-brain-needs-a-schema
 
 - File: `src/content/posts/a-second-brain-needs-a-schema.md`
-- Line: 70 (marker 2 of 2 on this line)
+- Line: 72 (marker 2 of 2 on this line)
 - Date: 2027-01-12
 - Marker: `[VERIFY: rough count of Concepts in the vault today, if Pearse is happy to share it]`
 - Question: Roughly how many Concepts are in the vault today, and are you happy to publish the number?
@@ -137,7 +137,7 @@ Marker text is quoted word for word from the source line. Delete this sheet once
 ## 17. 2027-01-19 · verifiable-and-erasable
 
 - File: `src/content/posts/verifiable-and-erasable.md`
-- Line: 42
+- Line: 44
 - Date: 2027-01-19
 - Marker: `[VERIFY: the Hub glossary and the certificate model disagree on whether certificates carry CME/DFP credit; this post says only "contact hours" and avoids the credit claim. Confirm before publishing.]`
 - Question: Does a certificate carry CME/DFP credit, or only contact hours? The glossary and the certificate model disagree; the post now says only "contact hours".
@@ -145,7 +145,7 @@ Marker text is quoted word for word from the source line. Delete this sheet once
 ## 18. 2027-01-19 · verifiable-and-erasable
 
 - File: `src/content/posts/verifiable-and-erasable.md`
-- Line: 64
+- Line: 66
 - Date: 2027-01-19
 - Marker: `[VERIFY: confirm Pearse is happy to cite Art. 17(3)(b) publicly as the basis.]`
 - Question: Are you happy to cite Art. 17(3)(b) publicly as the legal basis for keeping the licence number, attended days and threshold?
@@ -153,7 +153,7 @@ Marker text is quoted word for word from the source line. Delete this sheet once
 ## 19. 2027-01-19 · verifiable-and-erasable
 
 - File: `src/content/posts/verifiable-and-erasable.md`
-- Line: 76
+- Line: 78
 - Date: 2027-01-19
 - Marker: `[VERIFY: was this caught in testing or after a real erasure? Wording assumes testing.]`
 - Question: Was the order-sync bug caught in testing or after a real erasure? The wording assumes testing.

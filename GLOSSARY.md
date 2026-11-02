@@ -27,6 +27,10 @@ A non-draft article whose publication date is still in the future. It has no pag
 **Published**:
 A non-draft article whose publication date has passed as of the most recent rebuild. It has a page, is in the RSS feed, the sitemap and the Writing index.
 
+**Series**:
+An ordered run of articles about one product (MTS Hub or wetlabs.app), set by `series` and `seriesOrder`. Each published part shows "Part n of m" and links the other published parts; scheduled and draft parts are neither listed nor counted.
+_Enforced by_: `src/lib/series.ts`.
+
 **Rebuild**:
 The daily automated build and deploy that promotes scheduled articles to published on their date. No content changes are needed to trigger it.
 

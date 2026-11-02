@@ -6,8 +6,12 @@ import { SITE, formatDate, readingTime, absoluteUrl } from '../../lib/site';
 import { getPublishedPosts, postPath } from '../../lib/posts';
 import { getVisibleProjects } from '../../lib/projects';
 import { pageOg } from '../../lib/og';
+import { seriesNav, validateSeries } from '../../lib/series';
 
 export async function getStaticPaths() {
+  // Every article, drafts and scheduled included, so a duplicate seriesOrder fails the build
+  // before either article goes live.
+  validateSeries(await getCollection('posts'));
   const posts = await getPublishedPosts();
   return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
 }
@@ -21,10 +25,14 @@ const d = post.data;
 const minutes = readingTime(post.body ?? '');
 const og = pageOg(post.id, d.title);
 
-const all = await getPublishedPosts(); // newest first
+const now = new Date();
+const all = await getPublishedPosts(now); // newest first
 const i = all.findIndex((p) => p.id === post.id);
 const newer = i > 0 ? all[i - 1] : undefined;
 const older = i < all.length - 1 ? all[i + 1] : undefined;
+
+// Published parts only, at the same `now`: unpublished parts are neither listed nor counted.
+const series = seriesNav(post, await getCollection('posts'), now);
 
 const project = d.project ? (await getVisibleProjects()).find((p) => p.data.slug === d.project) : undefined;
 
@@ -74,6 +82,26 @@ const jsonLd = {
       )
     }
 
+    {
+      series && (
+        <nav class="series-nav rule-thin" aria-label={`Series: ${series.title}`} data-series-nav>
+          <p class="label">{`Series: ${series.title}`}</p>
+          <p class="display-narrow text-2xl mt-3">{`Part ${series.index} of ${series.total}`}</p>
+          <ol class="series-parts">
+            {series.parts.map((p) => (
+              <li>
+                {p.current ? (
+                  <span aria-current="page">{p.title}</span>
+                ) : (
+                  <a href={`/writing/${p.id}/`}>{p.title}</a>
+                )}
+              </li>
+            ))}
+          </ol>
+        </nav>
+      )
+    }
+
     <nav class="post-nav rule" aria-label="More writing">
       {
         older ? (
@@ -103,6 +131,35 @@ const jsonLd = {
 </Base>
 
 <style>
+  .series-nav {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    max-width: 52rem;
+  }
+  .series-parts {
+    list-style: decimal;
+    margin-top: 1rem;
+    padding-left: 2.25rem;
+    display: grid;
+    gap: 0.5rem;
+  }
+  .series-parts li {
+    overflow-wrap: anywhere;
+  }
+  .series-parts li::marker {
+    font-family: var(--font-mono);
+    color: var(--color-steel);
+  }
+  .series-parts a {
+    text-decoration: underline;
+    text-decoration-color: var(--color-lime);
+  }
+  .series-parts a:hover {
+    color: var(--color-lime);
+  }
+  .series-parts [aria-current='page'] {
+    color: var(--color-steel);
+  }
   .post-nav {
     display: grid;
     grid-template-columns: 1fr 1fr;

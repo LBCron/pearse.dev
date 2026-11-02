@@ -8,8 +8,7 @@ export function isPublished(post: Post, now = new Date()): boolean {
   return isPublishedPost(post.data, now);
 }
 
-export async function getPublishedPosts(): Promise<Post[]> {
-  const now = new Date();
+export async function getPublishedPosts(now = new Date()): Promise<Post[]> {
   const posts = await getCollection('posts', (p) => isPublished(p, now));
   return posts.sort((a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime());
 }

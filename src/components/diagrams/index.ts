@@ -6,6 +6,7 @@ import Observability from './Observability.astro';
 import EastCoastBlinds from './EastCoastBlinds.astro';
 import DublinPleinAir from './DublinPleinAir.astro';
 import PearseDev from './PearseDev.astro';
+import AgenticWorkflow from './AgenticWorkflow.astro';
 
 /** Frontmatter `diagram:` name -> component. Add new diagrams here and in DIAGRAM_NAMES. */
 export const DIAGRAMS: Record<DiagramName, typeof MtsHub> = {
@@ -16,4 +17,5 @@ export const DIAGRAMS: Record<DiagramName, typeof MtsHub> = {
   EastCoastBlinds,
   DublinPleinAir,
   PearseDev,
+  AgenticWorkflow,
 };

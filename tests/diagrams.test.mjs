@@ -1,7 +1,9 @@
 // Asserts the case studies render their accessible architecture diagrams (one under the
 // facts, plus one per feature section that names a diagram), that diagrams carry nothing
-// confidential-looking, that the two client diagrams draw what their prose says (#114),
-// and that case studies without a `diagram:` key have none.
+// confidential-looking (no addresses, hostnames, path-like text or repo slugs), that the
+// two client diagrams draw what their prose says (#114), that the agent-workflow diagram
+// keeps its side paths off the flow (#144), and that case studies without a `diagram:` key
+// have none.
 // Relies on `npm test`'s pretest build; run `npm run build` first when running this file alone.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -23,9 +25,10 @@ const DIAGRAMS = {
   'east-coast-blinds': ['diagram-east-coast-blinds'],
   'dublin-plein-air': ['diagram-dublin-plein-air'],
   'pearse-dev': ['diagram-pearse-dev'],
+  'agentic-workflow': ['diagram-agentic-workflow'],
 };
 // Case studies with no `diagram:` key.
-const WITHOUT = ['agentic-workflow', 'mx-creative-keypad'];
+const WITHOUT = ['mx-creative-keypad'];
 
 const page = (slug) => readFileSync(`dist/work/${slug}/index.html`, 'utf8');
 const imgSvgs = (html) => html.match(/<svg\b[^>]*\brole="img"[^>]*>/g) ?? [];
@@ -38,6 +41,10 @@ for (const [slug, ids] of Object.entries(DIAGRAMS)) {
       svgs.map((svg) => svg.match(/aria-labelledby="([^"]+)-title"/)?.[1]),
       ids,
     );
+  });
+
+  test(`${slug}: the main diagram sits in the "How it fits together" figure`, () => {
+    assert.ok(page(slug).includes('class="case-diagram"'), 'no case-diagram figure');
   });
 
   for (const [n, svg] of diagramSvgs(page(slug)).entries()) checkDiagram(`${slug} #${n + 1}`, svg);
@@ -63,6 +70,15 @@ function checkDiagram(name, svg) {
     assert.doesNotMatch(text, /\b\d{1,3}(?:\.\d{1,3}){3}\b/, 'IPv4-like address');
     assert.doesNotMatch(text, HOSTNAME, 'hostname-like text');
     for (const hidden of HIDDEN) assert.equal(text.toLowerCase().includes(hidden), false, hidden);
+  });
+
+  // A slash with text hard on both sides reads as a path ("Channels / Daphne" has spaces, so passes).
+  test(`${name}: diagram text has no path-like text or repo slug`, () => {
+    const text = textOf(svg);
+    assert.doesNotMatch(text, /\S\/\S/, 'path-like text');
+    assert.doesNotMatch(text, /~\//, 'home-relative path');
+    assert.doesNotMatch(text, /\.(?:sh|md|json)\b/i, 'script or config file name');
+    assert.doesNotMatch(text, /\bmts-[a-z]/i, 'repo-slug text');
   });
 }
 
@@ -198,4 +214,34 @@ test('rollback edges are static and dashed unlike optional and flow edges', () =
   assert.ok(rollbackDash && optionalDash && flowDash, 'all three edge styles set a dash');
   assert.notEqual(rollbackDash, optionalDash);
   assert.notEqual(rollbackDash, flowDash);
+});
+
+// #144: one flow path, planner to merge. The blocked write, the fix round and the leftovers are
+// side paths, never flow; there is no human approval node; and no counts appear anywhere.
+test('agentic-workflow: side paths are not flow, no gate node, no figures', () => {
+  const svg = diagramOf('agentic-workflow');
+  const text = textOf(svg);
+  // Numeric character references (an escaped apostrophe) are markup, not figures.
+  assert.doesNotMatch(text.replace(/&#\d+;/g, ''), /\d/, 'a count or figure in the diagram text');
+  for (const label of ['blocked', 'fix round', 'leftovers']) assert.ok(text.includes(label), label);
+  assert.doesNotMatch(svg, /\bnode-gate\b/, 'a human gate node');
+  const vs = views(svg);
+  assert.deepEqual(vs.map((v) => v.name), ['wide', 'narrow']);
+  for (const v of vs) {
+    const all = edges(v.body);
+    const into = (label) => all.filter((e) => touches(e.end, nodeBox(v.body, label)));
+    const checkout = into('Shared checkout');
+    assert.equal(checkout.length, 1, `${v.name}: one edge into the shared checkout`);
+    assert.equal(checkout[0].classes.includes('edge-flow'), false, `${v.name}: blocked edge is flow`);
+    const tracker = into('Issue tracker');
+    assert.equal(tracker.length, 2, `${v.name}: planner and leftovers reach the tracker`);
+    assert.equal(tracker.filter((e) => e.classes.includes('edge-flow')).length, 1, `${v.name}: only the planner edge is flow`);
+    const fix = into('Size S');
+    assert.equal(fix.length, 1, `${v.name}: the fix round reaches the delegates`);
+    assert.equal(fix[0].classes.includes('edge-flow'), false, `${v.name}: fix round is flow`);
+    assert.ok(into('Merge').every((e) => e.classes.includes('edge-flow')), `${v.name}: merge is on the flow`);
+  }
+  const narrow = vs.find((v) => v.name === 'narrow');
+  assert.match(narrow.tag, /\bviewBox="0 0 360 \d+(?:\.\d+)?"/);
+  assert.match(narrow.tag, /\bwidth="100%"/);
 });

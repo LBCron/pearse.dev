@@ -5,6 +5,7 @@ import { DIAGRAM_NAMES } from './lib/diagrams';
 import { PILLARS, POST_TAGS } from './lib/tags';
 import { publishBlockers } from './lib/verify-marker';
 import { META_DESCRIPTION_MAX, metaDescriptionLength } from './lib/seo';
+import { refineSeries, seriesFields } from './lib/series';
 
 const projects = defineCollection({
   loader: glob({ base: './src/content/projects', pattern: '**/*.{md,mdx}' }),
@@ -91,11 +92,14 @@ const posts = defineCollection({
     tags: z.array(z.enum(POST_TAGS)).min(1),
     project: z.string().optional(),
     draft: z.boolean().default(false),
+    // Optional article series (src/lib/series.ts): both `series` and `seriesOrder`, or neither.
+    // Duplicate orders within a series are caught across entries by validateSeries at build time.
+    ...seriesFields,
     social: z.object({
       linkedin: z.string(),
       short: z.string().max(300),
     }),
-  }),
+  }).superRefine(refineSeries),
 });
 
 const now = defineCollection({

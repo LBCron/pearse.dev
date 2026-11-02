@@ -4,6 +4,8 @@ description: "How I built MTS Hub, a Django system of record for a wetlab-educat
 pubDate: 2026-11-03
 tags: [django, agentic-engineering, architecture]
 project: "mts-hub"
+series: mts-hub
+seriesOrder: 1
 draft: false
 social:
   linkedin: |

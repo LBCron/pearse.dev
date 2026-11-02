@@ -4,6 +4,8 @@ description: "The Hub's second brain: voice notes over Telegram, self-hosted spe
 pubDate: 2027-01-12
 tags: [agentic-engineering, self-hosted-ai, architecture]
 project: "mts-hub"
+series: mts-hub
+seriesOrder: 3
 draft: true
 social:
   linkedin: |

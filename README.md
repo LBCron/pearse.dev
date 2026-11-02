@@ -144,6 +144,8 @@ pubDate: 2026-11-03
 updatedDate: 2026-11-10     # optional
 tags: [django, architecture]
 project: mts-hub            # optional, a project slug; links the post and the case study
+series: mts-hub             # optional, with seriesOrder: mts-hub | wetlabs-app (src/lib/series.ts)
+seriesOrder: 1              # positive integer, unique within the series
 draft: false
 social:
   linkedin: |
@@ -151,6 +153,8 @@ social:
   short: "≤300 chars incl. URL, for X/Bluesky/Mastodon."
 ---
 ```
+
+`series` and `seriesOrder` come as a pair or not at all. They put a "Part n of m" box on the article, listing only the published parts in `seriesOrder` order, once at least two are live; a duplicate order in one series fails the build, drafts included.
 
 `tags` is a closed list of one to three terms, validated by the schema, so an unknown tag fails the build. The vocabulary lives in `src/lib/tags.ts`; each tag maps to one of the four content pillars (Platform building (Django), Self-hosted AI in production, Agentic engineering, Career). A new tag is added there and must be carried by at least two posts (`tests/post-tags.test.mjs`).
 

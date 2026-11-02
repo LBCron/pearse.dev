@@ -4,6 +4,8 @@ description: "Building a pricing and sales pipeline in Django: immutable scenari
 pubDate: 2027-01-05
 tags: [django, architecture]
 project: "mts-hub"
+series: mts-hub
+seriesOrder: 2
 draft: true
 social:
   linkedin: |

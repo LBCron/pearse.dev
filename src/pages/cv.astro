@@ -3,7 +3,9 @@ import { getEntry, render } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import SectionLabel from '../components/SectionLabel.astro';
 import { getVisibleProjects } from '../lib/projects';
+import CopyEmail from '../components/CopyEmail.astro';
 import { INTERESTS, MARQUEE, SITE, absoluteUrl } from '../lib/site';
+import { buildMailto } from '../lib/mailto';
 
 // Facts that exist nowhere else live in src/content/cv/cv.md; everything else is derived
 // from the site, so the CV cannot drift from the case studies. Pending client case studies
@@ -26,7 +28,7 @@ const start = (period: string) => {
 const bare = (url: string) => url.replace(/^https?:\/\//, '').replace(/^www\./, '');
 
 const contacts = [
-  { href: `mailto:${SITE.email}`, text: SITE.email },
+  { href: buildMailto('cv').href, text: SITE.email, copy: true },
   { href: `${SITE.url}/`, text: bare(SITE.url) },
   { href: SITE.github, text: bare(SITE.github) },
   { href: SITE.linkedin, text: bare(SITE.linkedin) },
@@ -49,7 +51,14 @@ const next = () => String(++n).padStart(2, '0');
       </div>
       <div class="cv-aside">
         <ul class="cv-contact" aria-label="Contact">
-          {contacts.map((c) => <li><a class="link inline-block py-0.5 -my-0.5" href={c.href}>{c.text}</a></li>)}
+          {
+            contacts.map((c) => (
+              <li class={c.copy ? 'cv-mail' : undefined}>
+                <a class="link inline-block py-0.5 -my-0.5" href={c.href}>{c.text}</a>
+                {c.copy && <span class="cv-screen"><CopyEmail /></span>}
+              </li>
+            ))
+          }
           <li class="text-steel">{SITE.location}</li>
         </ul>
         {/* The link is plain HTML; scripts/cv-pdf.mjs removes it from dist/ when no PDF was built. */}
@@ -234,6 +243,16 @@ const next = () => String(++n).padStart(2, '0');
     font-size: clamp(2.5rem, 1rem + 6vw, 6rem);
     overflow-wrap: anywhere;
   }
+  /* Layout shift (#153): at 125% stretch Archivo is wider than its fallback, so the name wraps
+     to two lines at up to about 505px and 1024-1380px where the fallback still fits on one, and
+     the swap pushed the contact block down (CLS 0.03 on /cv/). Reserve the second line
+     (2 x the .display line-height of 0.86) in those bands, with a margin either side, so the
+     swap moves nothing. Screen only: print sets its own size. */
+  @media screen and (max-width: 33rem), screen and (min-width: 64rem) and (max-width: 88rem) {
+    .cv-name {
+      min-height: 1.72em;
+    }
+  }
   .cv-headline {
     margin-top: 1.5rem;
     max-width: 52ch;
@@ -259,6 +278,12 @@ const next = () => String(++n).padStart(2, '0');
     font-family: var(--font-mono);
     font-size: var(--text-sm);
     overflow-wrap: anywhere;
+  }
+  .cv-mail {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.75rem;
   }
   .cv-section {
     margin-top: clamp(3rem, 6vw, 4.5rem);

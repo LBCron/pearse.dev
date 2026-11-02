@@ -1,0 +1,60 @@
+---
+// Copy-email control (#153): sits beside a visible, selectable address. Like the /cv/ print
+// button it does nothing until the script confirms navigator.clipboard exists, but it uses
+// `visibility`, not `hidden`, so its box is reserved from first paint and revealing it moves
+// nothing. The status is a polite live region that exists from the start.
+import { SITE } from '../lib/site';
+---
+
+<span class="copy-email" data-copy-email>
+  <button type="button" class="btn btn-sm copy-email-btn" data-copy={SITE.email} aria-label="Copy email address">Copy</button>
+  <span class="copy-email-status" role="status" aria-live="polite" data-copy-status></span>
+</span>
+
+<script>
+  // No imports: this ships on / and /cv/ and needs nothing but the clipboard.
+  const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+  if (clipboard && typeof clipboard.writeText === 'function') {
+    document.querySelectorAll<HTMLElement>('[data-copy-email]').forEach((root) => {
+      const btn = root.querySelector<HTMLButtonElement>('[data-copy]');
+      const status = root.querySelector<HTMLElement>('[data-copy-status]');
+      if (!btn || !status) return;
+      root.dataset.ready = '';
+      btn.addEventListener('click', async () => {
+        status.textContent = '';
+        try {
+          await clipboard.writeText(btn.dataset.copy ?? '');
+          status.textContent = 'Copied';
+        } catch {
+          status.textContent = 'Copy failed, select the address';
+        }
+      });
+    });
+  }
+</script>
+
+<style>
+  .copy-email {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+  }
+  .copy-email-btn {
+    visibility: hidden;
+  }
+  .copy-email[data-ready] .copy-email-btn {
+    visibility: visible;
+  }
+  .copy-email-status {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.06em;
+    color: var(--color-steel);
+  }
+  @media print {
+    .copy-email {
+      display: none !important;
+    }
+  }
+</style>

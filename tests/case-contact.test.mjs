@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { projects } from './lib/projects.mjs';
-import { contactHref, contactVariant } from '../src/lib/contact.ts';
+import { contactVariant } from '../src/lib/contact.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 process.chdir(ROOT);
@@ -76,13 +76,6 @@ test('the block sits before the Previous/Next nav, and after "Writing about this
     const related = html.indexOf('id="related-title"');
     if (related !== -1) assert.ok(related < at, `${p.slug}: after the related writing`);
   }
-});
-
-test('contactHref builds an encoded mailto from the title and address it is given', () => {
-  assert.equal(contactHref('MTS Hub', 'a@b.c'), 'mailto:a@b.c?subject=About%20MTS%20Hub');
-  const odd = contactHref('Q&A? Time', 'a@b.c');
-  assert.ok(odd.includes('Q%26A%3F%20Time'), odd);
-  assert.ok(!odd.slice(odd.indexOf('subject=')).match(/[&?]/), 'no raw & or ? in the subject');
 });
 
 test('contactVariant is a pure function of visibility and repo', () => {

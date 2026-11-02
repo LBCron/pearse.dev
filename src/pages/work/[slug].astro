@@ -3,8 +3,9 @@ import { getCollection, render } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import PostRow from '../../components/PostRow.astro';
-import { CATEGORY_LABEL, SITE } from '../../lib/site';
-import { contactHref, contactVariant } from '../../lib/contact';
+import { CATEGORY_LABEL } from '../../lib/site';
+import { contactVariant } from '../../lib/contact';
+import { aboutProjectHref } from '../../lib/mailto';
 import { relatedPosts } from '../../lib/visibility';
 import { getVisibleProjects, getWorkSequence } from '../../lib/projects';
 import { caseNumber } from '../../lib/work-order';
@@ -36,7 +37,7 @@ const hasBody = (project.body ?? '').trim().length > 0;
 const ProjectDiagram = d.diagram ? DIAGRAMS[d.diagram] : undefined;
 const hasSections = d.sections.length > 0;
 const contact = contactVariant(d);
-const mailto = contactHref(d.title, SITE.email);
+const mailto = aboutProjectHref(d.title);
 ---
 
 <Base title={d.title} description={d.description ?? d.oneLiner} {...og}>

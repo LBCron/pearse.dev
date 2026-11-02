@@ -10,7 +10,7 @@ process.chdir(ROOT);
 test('/now/ page has updated date and mailto link', () => {
   const html = readFileSync('dist/now/index.html', 'utf8');
   assert.match(html, /Updated /);
-  assert.match(html, /href="mailto:pearse@pearse\.dev"/);
+  assert.match(html, /href="mailto:pearse@pearse\.dev(\?subject=[^"&]*)?"/);
   assert.match(html, /href="https:\/\/nownownow\.com\/about"[^>]*rel="noopener"/);
 });
 

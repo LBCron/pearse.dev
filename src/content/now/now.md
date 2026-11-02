@@ -34,4 +34,4 @@ Innsbruck, originally from Dublin. Off the clock, in no particular order:
 
 ## Open to conversations
 
-Yes, if you have an interesting problem in Django, self-hosted AI or agent workflows. Write to [pearse@pearse.dev](mailto:pearse@pearse.dev).
+Yes, if you have an interesting problem in Django, self-hosted AI or agent workflows.

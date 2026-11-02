@@ -1,10 +1,13 @@
 ---
-import { SITE } from '../lib/site';
+import { LEGAL, SITE } from '../lib/site';
+import { legalState } from '../lib/legal';
 import { profileLinks } from '../lib/profile-links';
 const year = new Date().getFullYear();
 // One class string for every footer link, so the profile links look like their neighbours (#105, #157).
 const linkClass = 'inline-block py-2 text-steel hover:text-lime';
 const profiles = profileLinks(SITE);
+// Linked only once the Impressum block is complete, the same rule that builds the page (#155).
+const impressum = legalState(LEGAL).state === 'complete';
 ---
 
 <footer class="rule mt-24 md:mt-32">
@@ -20,6 +23,7 @@ const profiles = profileLinks(SITE);
       <li><a class={linkClass} href="/rss.xml">RSS</a></li>
       <li><a class={linkClass} href="/social.json">social.json</a></li>
       {profiles.map((p) => <li><a class={linkClass} href={p.href} rel="me">{p.label}</a></li>)}
+      {impressum && <li><a class={linkClass} href="/impressum/">Impressum</a></li>}
     </ul>
   </div>
 </footer>

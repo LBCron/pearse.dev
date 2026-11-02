@@ -1,0 +1,62 @@
+---
+/**
+ * /impressum/, fail-closed (#155). A dynamic route because a static page would always emit:
+ * getStaticPaths returns nothing while `LEGAL` is unset, throws (failing the build) while it is
+ * incomplete, and returns only `impressum` once it is complete. It adds no other path, so the static
+ * pages beside it (cv, now, 404) are untouched. Every heading and paragraph comes from `LEGAL`; the
+ * email is `SITE.email`. noindex through the Base prop; astro.config.mjs keeps it out of the sitemap.
+ */
+import type { GetStaticPaths } from 'astro';
+import Base from '../layouts/Base.astro';
+import { LEGAL, SITE } from '../lib/site';
+import { legalError, legalState } from '../lib/legal';
+import { ADDRESS_URI } from '../lib/mailto';
+
+export const getStaticPaths = (() => {
+  const s = legalState(LEGAL);
+  if (s.state === 'unset') return [];
+  if (s.state === 'incomplete') throw legalError(s.missing);
+  return [{ params: { legal: 'impressum' } }];
+}) satisfies GetStaticPaths;
+
+// getStaticPaths only returns a path for a complete block, so LEGAL is set here.
+const legal = LEGAL!;
+const paragraphs = (body: string) =>
+  body
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+---
+
+<Base title={legal.heading} description={`${legal.heading}: ${legal.name}`} noindex>
+  <section class="wrap pt-16 md:pt-24 pb-10 max-w-[72ch]">
+    <h1 class="display text-4xl">{legal.heading}</h1>
+    <address class="mt-8 not-italic text-lg">
+      <p>{legal.name}</p>
+      {legal.address.map((line) => <p>{line}</p>)}
+      <p class="mt-4"><a class="inline-block py-2 text-lime hover:underline" href={ADDRESS_URI}>{SITE.email}</a></p>
+    </address>
+    {
+      legal.details && legal.details.length > 0 && (
+        <dl class="mt-8 grid gap-x-6 gap-y-2 sm:grid-cols-[auto_1fr]">
+          {legal.details.map((d) => (
+            <>
+              <dt class="font-mono text-xs uppercase tracking-[0.14em] text-steel sm:pt-1">{d.label}</dt>
+              <dd>{d.value}</dd>
+            </>
+          ))}
+        </dl>
+      )
+    }
+    {
+      legal.sections.map((s) => (
+        <section class="mt-10">
+          <h2 class="font-mono text-xs uppercase tracking-[0.14em] text-steel">{s.heading}</h2>
+          {paragraphs(s.body).map((p) => (
+            <p class="mt-3">{p}</p>
+          ))}
+        </section>
+      ))
+    }
+  </section>
+</Base>

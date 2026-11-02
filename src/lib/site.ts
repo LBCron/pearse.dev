@@ -20,6 +20,29 @@ export const SITE = {
   ogImage: '/og-default.png',
 } as const;
 
+/**
+ * The Impressum block (#155). Kept out of `SITE` on purpose: under `as const` an absent key would make
+ * `SITE.legal` a type error. Every heading and paragraph on the page comes from here; the page has no
+ * wording of its own. There is no email field: the page shows `SITE.email`, like the footer and the
+ * home contact block. `legalState()` in `src/lib/legal.ts` classifies it, and only a complete block
+ * builds `/impressum/` and its footer link. An incomplete one fails the build. Ships unset; the values
+ * arrive only through the human-only follow-up issue.
+ */
+export interface LegalBlock {
+  /** The page <h1>. */
+  heading: string;
+  /** The name as it should appear on the page. */
+  name: string;
+  /** Postal address lines, non-empty. */
+  address: string[];
+  /** Headed paragraphs, non-empty. A blank line in `body` starts a new paragraph. */
+  sections: { heading: string; body: string }[];
+  /** Optional label/value lines. */
+  details?: { label: string; value: string }[];
+}
+
+export const LEGAL: LegalBlock | undefined = undefined;
+
 export const NAV = [
   { href: '/work/', label: 'Work' },
   { href: '/writing/', label: 'Writing' },

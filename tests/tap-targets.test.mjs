@@ -12,11 +12,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { LEGAL } from '../src/lib/site.ts';
+import { legalState } from '../src/lib/legal.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 process.chdir(ROOT);
 
 const PAGES = ['dist/index.html', 'dist/work/index.html', 'dist/cv/index.html'];
+// Seven fixed footer links, plus Impressum once its block is complete (#155).
+const FOOTER_LINKS = 7 + (legalState(LEGAL).state === 'complete' ? 1 : 0);
 const read = (f) => readFileSync(f, 'utf8');
 const anchors = (html) => [...html.matchAll(/<a\b[^>]*>/g)].map((m) => m[0]);
 const classOf = (tag) => tag.match(/\bclass="([^"]*)"/)?.[1] ?? '';
@@ -65,7 +69,7 @@ test('primary nav links, the logo and every footer link are inline-block py-2 ta
     assertTarget(logo[0], `${f} logo`);
 
     const footer = anchors(section(html, '<footer', '</footer>'));
-    assert.equal(footer.length, 7, `${f}: seven footer links`);
+    assert.equal(footer.length, FOOTER_LINKS, `${f}: ${FOOTER_LINKS} footer links`);
     for (const a of footer) assertTarget(a, `${f} footer`);
   }
 });

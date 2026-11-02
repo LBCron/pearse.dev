@@ -223,6 +223,18 @@ Every mailto on the site comes from `src/lib/mailto.ts` (#153), and no page, com
 
 The home `#contact` section and the `/cv/` contact line have a Copy button beside the address; it is reserved with `visibility` from first paint and shown only when `navigator.clipboard` exists, and `/cv/` hides it in print. `#contact` also has a brief form: without script it is a native `method="get"` form to the bare mailto address with a hidden `subject` and a `body` textarea, the only named fields; with script, submit goes through `buildMailto('brief', …)` and "Copy brief" copies the plain text, for webmail and for briefs over the cap.
 
+### Impressum
+
+`/impressum/` is built from one block, `LEGAL` in `src/lib/site.ts`, typed `LegalBlock | undefined` and kept outside `SITE` (#155). It holds the page heading, the name, the address lines, a list of headed sections and optional label/value details. The code has no wording of its own: every heading and paragraph comes from the block, and the footer link label "Impressum" is the only fixed string. There is no email field; the page shows `SITE.email`, so it cannot drift from the footer and the home contact block.
+
+`legalState()` in `src/lib/legal.ts` (import-free, so the tests load it under type stripping) sorts the block into one of three states, and the dynamic route `src/pages/[legal].astro` acts on it:
+
+- **unset** (`undefined`, as shipped): no page, no footer link, nothing in the sitemap.
+- **incomplete** (a required field missing, blank or an empty array): the build fails and names every missing field.
+- **complete**: the build emits `/impressum/` with robots `noindex` (the `Base` prop), the footer links it, and `astro.config.mjs` keeps it out of the sitemap.
+
+The block ships unset. Real values and wording arrive only through the human-only follow-up issue, after `npm run gate` passes with the real denylist. `tests/impressum.test.mjs` covers the states with placeholder fixtures and checks the shipped build; its complete-state branch runs only with a block set locally.
+
 ### CV
 
 `/cv/` is built from the site: contact links and location from `src/lib/site.ts`, the featured case studies and the MTS ones that are visible (pending client case studies are excluded, as everywhere; only the start of each period is shown, and roles are left to the case study pages), and the marquee stack as skills. Facts that exist nowhere else on the site (headline, profile, experience, education, and languages once confirmed) live in `src/content/cv/cv.md`; their wording follows `docs/profile/`, and nothing that still carries a verify marker there goes in. The page has a print stylesheet (A4, black on white, no nav or footer, links spelled out, entries never split across pages). Keep it at two pages or fewer when adding content: `npm test` fails on a third.

@@ -24,6 +24,9 @@ const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const WORKFLOW_TEXT = read('automation/n8n/social-scheduler.json');
 const workflow = JSON.parse(WORKFLOW_TEXT);
 const node = (name) => workflow.nodes.find((n) => n.name === name);
+const ERRORS_TEXT = read('automation/n8n/scheduler-errors.json');
+const errors = JSON.parse(ERRORS_TEXT);
+const errorNode = (name) => errors.nodes.find((n) => n.name === name);
 
 const AUTHOR = 'urn:li:person:abc123';
 const CHAT = '1000';
@@ -375,7 +378,7 @@ test('workflow is valid n8n JSON with credentials referenced by name only', () =
   assert.equal(workflow.settings.timezone, 'Europe/Vienna');
   const schedule = node('Daily schedule').parameters.rule.interval.map((r) => r.expression);
   assert.deepEqual(schedule, ['0 7 * * *']);
-  for (const n of workflow.nodes) {
+  for (const n of [...workflow.nodes, ...errors.nodes]) {
     for (const [type, ref] of Object.entries(n.credentials ?? {})) {
       assert.deepEqual(Object.keys(ref), ['name'], `${n.name} ${type}`);
       assert.ok(['linkedin-member', 'telegram-pearse-dev', 'bluesky-app-password', 'mastodon-token'].includes(ref.name), `${n.name} uses ${ref.name}`);
@@ -393,12 +396,121 @@ test('workflow is valid n8n JSON with credentials referenced by name only', () =
 });
 
 test('workflow holds no credential values or chat ids', () => {
-  assert.doesNotMatch(WORKFLOW_TEXT, /bot\d+:/i, 'telegram bot url');
-  assert.doesNotMatch(WORKFLOW_TEXT, /\d{6,}:[A-Za-z0-9_-]{20,}/, 'telegram bot token');
-  assert.doesNotMatch(WORKFLOW_TEXT, /\bAQ[A-Za-z0-9_-]{20,}/, 'linkedin token');
-  assert.doesNotMatch(WORKFLOW_TEXT, /Bearer\s+[A-Za-z0-9]/, 'bearer value');
-  assert.doesNotMatch(WORKFLOW_TEXT, /"-?\d{5,}"/, 'digits-only string, like a chat id');
-  assert.doesNotMatch(WORKFLOW_TEXT, /chat_?id\W{1,4}-?\d{5,}/i, 'chat id literal');
+  for (const [file, text] of [['social-scheduler.json', WORKFLOW_TEXT], ['scheduler-errors.json', ERRORS_TEXT]]) {
+    assert.doesNotMatch(text, /bot\d+:/i, `${file}: telegram bot url`);
+    assert.doesNotMatch(text, /\d{6,}:[A-Za-z0-9_-]{20,}/, `${file}: telegram bot token`);
+    assert.doesNotMatch(text, /\bAQ[A-Za-z0-9_-]{20,}/, `${file}: linkedin token`);
+    assert.doesNotMatch(text, /Bearer\s+[A-Za-z0-9]/, `${file}: bearer value`);
+    assert.doesNotMatch(text, /"-?\d{5,}"/, `${file}: digits-only string, like a chat id`);
+    assert.doesNotMatch(text, /chat_?id\W{1,4}-?\d{5,}/i, `${file}: chat id literal`);
+  }
+});
+
+test('Fetch social feed retries 3 times, 5 s apart, and the error item still reaches Decide (ADR 0004)', () => {
+  const f = node('Fetch social feed');
+  assert.equal(f.retryOnFail, true);
+  assert.equal(f.maxTries, 3);
+  assert.equal(f.waitBetweenTries, 5000);
+  assert.equal(f.onError, 'continueRegularOutput', 'after the last try the error item goes on to Decide');
+  const response = f.parameters.options.response.response;
+  // neverError: true would hide every HTTP error from n8n, so nothing would ever be retried.
+  assert.ok(response.neverError === undefined || response.neverError === false, 'neverError must be absent or false');
+  assert.equal(f.parameters.options.timeout, 30000);
+  assert.deepEqual(workflow.connections['Fetch social feed'].main[0].map((l) => l.node), ['Decide']);
+});
+
+test('no other httpRequest node retries: a post is never blindly repeated (ADR 0004)', () => {
+  const http = workflow.nodes.filter((n) => n.type === 'n8n-nodes-base.httpRequest' && n.name !== 'Fetch social feed');
+  assert.ok(http.length >= 5, 'the post and session nodes are still there');
+  for (const n of http) {
+    assert.equal(n.retryOnFail, undefined, `${n.name} must not retry`);
+    assert.equal(n.maxTries, undefined, `${n.name} must not set maxTries`);
+    assert.equal(n.waitBetweenTries, undefined, `${n.name} must not set waitBetweenTries`);
+  }
+  for (const n of workflow.nodes.filter((x) => x.name !== 'Fetch social feed')) assert.notEqual(n.retryOnFail, true, `${n.name} must not retry`);
+});
+
+test('Send offer has no onError, so its failure fails the execution and reaches the error workflow', () => {
+  assert.equal(node('Send offer').onError, undefined);
+  assert.equal(node('Send offer').continueOnFail, undefined);
+});
+
+test('the scheduler export carries no errorWorkflow id: it is instance-specific and chosen at import', () => {
+  assert.equal('errorWorkflow' in workflow.settings, false);
+  assert.match(node('About').parameters.content, /Error workflow/);
+  assert.match(node('About').parameters.content, /pearse\.dev scheduler errors/);
+});
+
+test('scheduler-errors.json is Error trigger -> Send alert and nothing else', () => {
+  assert.equal(errors.name, 'pearse.dev scheduler errors');
+  assert.deepEqual(errors.nodes.map((n) => n.type), ['n8n-nodes-base.errorTrigger', 'n8n-nodes-base.telegram']);
+  assert.equal(errors.nodes.length, 2);
+  assert.deepEqual(errors.nodes.map((n) => n.name), ['Error trigger', 'Send alert']);
+  assert.deepEqual(Object.keys(errors.connections), ['Error trigger']);
+  const links = errors.connections['Error trigger'].main;
+  assert.equal(links.length, 1);
+  assert.deepEqual(links[0].map((l) => l.node), ['Send alert']);
+  for (const [from, c] of Object.entries(errors.connections)) {
+    assert.ok(errorNode(from), from);
+    for (const out of c.main) for (const link of out) assert.ok(errorNode(link.node), `${from} -> ${link.node}`);
+  }
+  assert.equal('errorWorkflow' in errors.settings, false);
+});
+
+test('Send alert: the named credential only, plain text, chat id from $vars then $env', () => {
+  const alert = errorNode('Send alert');
+  assert.deepEqual(alert.credentials, { telegramApi: { name: 'telegram-pearse-dev' } });
+  assert.equal(alert.parameters.additionalFields.appendAttribution, false);
+  assert.equal('parse_mode' in alert.parameters.additionalFields, false, 'raw error text must go as plain text');
+  assert.doesNotMatch(JSON.stringify(alert.parameters), /parse_?mode/i);
+  const chat = alert.parameters.chatId;
+  assert.match(chat, /TELEGRAM_CHAT_ID/);
+  assert.ok(chat.indexOf('$vars') !== -1 && chat.indexOf('$vars') < chat.indexOf('$env'), '$vars is read before $env');
+  assert.doesNotMatch(chat, /\d/, 'no digits literal in the chat id');
+});
+
+// Evaluates the Send alert text expression the way n8n would, over one error item.
+function alertText(item) {
+  const expr = errorNode('Send alert').parameters.text;
+  assert.ok(expr.startsWith('={{') && expr.endsWith('}}'));
+  return new Function('$json', `return (${expr.slice(3, -2)});`)(item);
+}
+
+test('Send alert text names the workflow, last node, error, execution id and url, and the /reoffer hint', () => {
+  const text = alertText({
+    workflow: { id: 'w1', name: 'pearse.dev social scheduler' },
+    execution: { id: '77', url: 'https://n8n.example/workflow/w1/executions/77', lastNodeExecuted: 'Send offer', error: { message: 'Bad Request: chat not found' } },
+  });
+  assert.match(text, /pearse\.dev social scheduler/);
+  assert.match(text, /Last node executed: Send offer/);
+  assert.match(text, /Bad Request: chat not found/);
+  assert.match(text, /Execution id: 77/);
+  assert.match(text, /Execution URL: https:\/\/n8n\.example\/workflow\/w1\/executions\/77/);
+  assert.match(text, /If it failed at Send offer, that item is marked offered: check the execution, then \/reoffer <id>\./);
+  const expr = errorNode('Send alert').parameters.text;
+  for (const word of ['lastNodeExecuted', 'error', 'execution', '.id', '.url', 'slice(0, 500)', '?.']) assert.ok(expr.includes(word), word);
+});
+
+test('Send alert text cuts a long error to 500 characters', () => {
+  const text = alertText({ workflow: { name: 'w' }, execution: { id: '1', url: 'u', lastNodeExecuted: 'n', error: { message: `${'x'.repeat(2000)}END` } } });
+  const err = text.split('\n').find((l) => l.startsWith('Error: '));
+  assert.equal(err.length, 'Error: '.length + 500);
+  assert.doesNotMatch(text, /END/);
+});
+
+test('Send alert still sends when a trigger-level failure delivers trigger instead of execution', () => {
+  const text = alertText({ workflow: { name: 'pearse.dev social scheduler' }, trigger: { error: { message: 'Webhook registration failed', node: { name: 'Telegram update' } }, mode: 'trigger' } });
+  assert.match(text, /pearse\.dev social scheduler/);
+  assert.match(text, /Last node executed: Telegram update/);
+  assert.match(text, /Webhook registration failed/);
+  assert.match(text, /\/reoffer <id>/);
+  assert.doesNotThrow(() => alertText({}));
+});
+
+test('scheduler-errors.json names no host or address, and only the allowed literals', () => {
+  assert.doesNotMatch(ERRORS_TEXT, /https?:\/\//i, 'no URL');
+  assert.doesNotMatch(ERRORS_TEXT, /\b\d{1,3}(\.\d{1,3}){3}\b/, 'no IPv4 address');
+  assert.doesNotMatch(ERRORS_TEXT, /Bearer|token/i);
 });
 
 test('Code nodes embed select.mjs verbatim', () => {
@@ -449,6 +561,23 @@ test('embedded Decide node: daily offer, Approve in dry run, then a no-op rerun'
   const bad = runNode('Decide', { input: feedRes, upstream: { 'Daily schedule': {} }, staticData, vars: { ...vars, TELEGRAM_USER_ID: 'me' } });
   assert.deepEqual(bad.map((o) => [o.action, o.chatId]), [['notify', CHAT]]);
   assert.match(bad[0].text, /configuration error/);
+});
+
+test('embedded Decide node: a feed read error is reported to the chat, never recorded or posted', () => {
+  const vars = { TELEGRAM_CHAT_ID: CHAT, LINKEDIN_AUTHOR_URN: AUTHOR, SCHEDULER_TODAY: '2026-11-03' };
+  const input = { error: { message: 'ETIMEDOUT' } };
+  const staticData = {};
+  const daily = runNode('Decide', { input, upstream: { 'Daily schedule': {} }, staticData, vars });
+  assert.equal(daily.length, 1);
+  assert.equal(daily[0].action, 'notify');
+  assert.equal(daily[0].chatId, CHAT);
+  assert.match(daily[0].text, /Could not read the social feed: ETIMEDOUT/);
+  const tap = { callback_query: { id: 'q1', data: 'approve:p01', message: { chat: { id: 1000 } } } };
+  const approved = runNode('Decide', { input, upstream: { 'Telegram update': tap }, staticData, vars });
+  assert.deepEqual(approved.map((o) => o.action), ['ack', 'notify']);
+  assert.match(approved[1].text, /Could not read the social feed: ETIMEDOUT/);
+  assert.ok(!approved.some((o) => ['post', 'dryrun', 'bluesky', 'mastodon'].includes(o.action)), 'nothing is posted');
+  assert.deepEqual(staticData, { dryRun: { record: [], offered: {} } }, 'nothing is recorded or marked offered');
 });
 
 test('embedded Decide node: the warning appears at 07:00 Vienna and not at 05:00, whatever the real time', () => {

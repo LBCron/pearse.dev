@@ -80,7 +80,7 @@ test('dist/ is hashed right after Build and verified after the gate', () => {
 test('the last check step uploads dist as the Pages artifact outside pull requests, after gate and verify', () => {
   const lastAt = checkSteps.length - 1;
   const last = checkSteps[lastAt];
-  assert.equal(last.uses, 'actions/upload-pages-artifact@v5');
+  assert.match(last.uses, /^actions\/upload-pages-artifact@[0-9a-f]{40}$/); // pinned (#162)
   assert.equal(last.with?.path, 'dist');
   assert.match(String(last.if ?? ''), /github\.event_name\s*!=\s*'pull_request'/);
   const gateAt = checkSteps.findIndex(isGate);

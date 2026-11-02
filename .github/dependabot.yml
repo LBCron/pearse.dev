@@ -1,0 +1,26 @@
+# Weekly, grouped version updates (#162): at most one npm PR and one Actions PR a week.
+# Security updates are separate and not held back by the cooldown.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # A release must be a week old before Dependabot proposes it.
+    cooldown:
+      default-days: 7
+    groups:
+      npm-minor-patch:
+        patterns: ['*']
+        # Majors are left out of the group and open their own PRs.
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ['*']

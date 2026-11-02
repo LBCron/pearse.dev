@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
@@ -36,11 +38,12 @@ jobs:
         run: npm run build
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      # Content hash of every non-hidden file in dist/, the set upload-pages-artifact archives.
+      # Content hash of every file in dist/, hidden ones included: the Pages upload below sets
+      # include-hidden-files so /.well-known/ ships (#140), and the hash must cover what ships.
       - name: Hash dist
         id: dist-hash
         run: |
-          hash=$( (cd dist && find . -type f -not -path '*/.*' -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) | sha256sum | cut -d' ' -f1)
+          hash=$( (cd dist && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) | sha256sum | cut -d' ' -f1)
           echo "dist sha256 after Build: $hash"
           echo "sha256=$hash" >> "$GITHUB_OUTPUT"
       - name: Link crawl
@@ -87,7 +90,7 @@ jobs:
         env:
           EXPECTED: ${{ steps.dist-hash.outputs.sha256 }}
         run: |
-          hash=$( (cd dist && find . -type f -not -path '*/.*' -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) | sha256sum | cut -d' ' -f1)
+          hash=$( (cd dist && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) | sha256sum | cut -d' ' -f1)
           echo "dist sha256 before upload: $hash"
           if [ -z "$EXPECTED" ] || [ "$hash" != "$EXPECTED" ]; then
             echo "::error::dist/ changed after Build (expected $EXPECTED, got $hash)"
@@ -100,3 +103,4 @@ jobs:
         uses: actions/upload-pages-artifact@v5
         with:
           path: dist
+          include-hidden-files: true

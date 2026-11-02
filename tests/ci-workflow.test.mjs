@@ -90,3 +90,14 @@ test('the last check step uploads dist as the Pages artifact outside pull reques
   const uploads = stepsOf(check).filter((s) => String(s.uses ?? '').startsWith('actions/upload-pages-artifact'));
   assert.equal(uploads.length, 1, 'one Pages upload');
 });
+
+// #140: upload-pages-artifact leaves out dot-paths unless told otherwise, which would drop
+// /.well-known/security.txt from the deployed site while every local test passes. The dist hash
+// must cover what ships, hidden files included.
+test('the Pages upload includes hidden files and both dist hashes cover them', () => {
+  const upload = checkSteps.find((s) => String(s.uses ?? '').startsWith('actions/upload-pages-artifact'));
+  assert.equal(upload.with?.['include-hidden-files'], true);
+  for (const step of checkSteps.filter((s) => s.id === 'dist-hash' || isHashVerify(s))) {
+    assert.doesNotMatch(String(step.run), /-not -path/, `${step.name} hashes hidden files`);
+  }
+});

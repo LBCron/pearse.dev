@@ -95,9 +95,14 @@ sections:                   # optional feature sections, rendered under "What it
     features: ["…", "…"]
     stack: [Celery]         # optional chips
     diagram: MtsCortex      # optional; same names as `diagram:`
+process:                    # optional, client only; rendered as "How the job ran" after the body and sections
+  - step: audit             # audit | staging | gated | cutover | written-down, in that order, two or more
+    proof: One sentence (max 160 chars) from this page that backs every clause of the step's promise.
 ---
 Optional notes in Markdown, rendered under the facts.
 ```
+
+`process` is for client case studies only; on any other category the build fails. The step titles and promises are shared and live in `src/lib/process.ts`; an entry cannot override them. Each `proof` paraphrases a line on the same page and must back every clause of its step's promise, adding no number, name, host or tool the page does not already state. List a step only when the page backs it. `tests/process.test.mjs` pins the steps per case study and checks that each proof's numbers and proper nouns appear elsewhere on its page.
 
 A granted client case study titled by its domain must set `live`, and `tests/client-live-link.test.mjs` enforces it.
 

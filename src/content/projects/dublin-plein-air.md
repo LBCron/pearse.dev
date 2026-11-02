@@ -32,6 +32,15 @@ hooks:
   - An adversarial review of the upgrade plan found seven defects in its own rollback paths before a single step ran.
   - "`cmd && echo OK` cannot fail a script under `set -e`. Running step zero found that; every preflight block was fixed before step one."
   - The CRM replaces a FileMaker database that only one person could operate.
+process:
+  - step: audit
+    proof: "A read-only audit from the outside covered seven areas, and every finding was re-checked by a second pass before it was filed."
+  - step: staging
+    proof: "Updates are rehearsed on a staging clone with no public DNS and a guard plugin that stops it emailing or charging anyone, before they touch live."
+  - step: gated
+    proof: "The upgrade is twenty gated steps, each with its own preflight and rollback, starting from a fresh backup verified off the server."
+  - step: written-down
+    proof: "The server's hardening config now lives in the repository, byte for byte what runs on the box, so a change is a diff rather than a memory."
 visibility: private
 category: client
 clientPermission: granted

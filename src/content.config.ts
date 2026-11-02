@@ -6,6 +6,7 @@ import { PILLARS, POST_TAGS } from './lib/tags';
 import { publishBlockers } from './lib/verify-marker';
 import { META_DESCRIPTION_MAX, metaDescriptionLength } from './lib/seo';
 import { refineSeries, seriesFields } from './lib/series';
+import { PROCESS_STEP_IDS, processIssues } from './lib/process';
 
 const projects = defineCollection({
   loader: glob({ base: './src/content/projects', pattern: '**/*.{md,mdx}' }),
@@ -68,7 +69,26 @@ const projects = defineCollection({
           seen.add(s.id);
         });
       }),
+    // "How the job ran" (src/lib/process.ts): the canonical steps this page backs, in order, each
+    // with one sentence of proof from this page. The promise text is shared; client case studies only.
+    process: z
+      .array(
+        z.object({
+          step: z.enum(PROCESS_STEP_IDS),
+          proof: z.string().max(160),
+        }),
+      )
+      .default([])
+      .superRefine((steps, ctx) => {
+        for (const { index, message } of processIssues(steps)) {
+          ctx.addIssue({ code: 'custom', path: [index, 'step'], message });
+        }
+      }),
   }).superRefine((d, ctx) => {
+    // The process block states a client job's method; no other category may carry one (#160).
+    if (d.category !== 'client' && d.process.length > 0) {
+      ctx.addIssue({ code: 'custom', path: ['process'], message: `"${d.slug}": process is for client case studies only` });
+    }
     // The page's meta description is `description ?? oneLiner`; the shared rule caps it (#134).
     const n = metaDescriptionLength(d.description ?? d.oneLiner);
     if (n > META_DESCRIPTION_MAX) {

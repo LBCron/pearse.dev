@@ -27,6 +27,13 @@ features:
 hooks:
   - Every check has three exit codes — passed, failed, could not run — and "could not run" is never a pass.
   - When the CI minutes ran out, runs queued forever instead of failing. A four-second pre-push hook now runs the same lint locally.
+process:
+  - step: audit
+    proof: "A full audit of the live store is filed as issues by priority, phase and domain."
+  - step: staging
+    proof: "Every catalogue script has a dry run and is rehearsed on a staging copy of production before it runs on the shop."
+  - step: written-down
+    proof: "The child theme, Apache config, backup scripts and staging guard live in the repository, and the audit is a backlog, not a list in someone's head."
 visibility: private
 category: client
 clientPermission: granted

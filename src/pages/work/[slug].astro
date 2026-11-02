@@ -3,12 +3,14 @@ import { getCollection, render } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import PostRow from '../../components/PostRow.astro';
+import Process from '../../components/Process.astro';
 import { CATEGORY_LABEL } from '../../lib/site';
 import { contactVariant } from '../../lib/contact';
 import { aboutProjectHref } from '../../lib/mailto';
 import { relatedPosts } from '../../lib/visibility';
 import { getVisibleProjects, getWorkSequence } from '../../lib/projects';
 import { caseNumber } from '../../lib/work-order';
+import { PROCESS_STEPS } from '../../lib/process';
 import { pageOg } from '../../lib/og';
 import { DIAGRAMS } from '../../components/diagrams';
 
@@ -36,6 +38,11 @@ const related = relatedPosts(await getCollection('posts'), d.slug);
 const hasBody = (project.body ?? '').trim().length > 0;
 const ProjectDiagram = d.diagram ? DIAGRAMS[d.diagram] : undefined;
 const hasSections = d.sections.length > 0;
+// "How the job ran" (#160): each listed step resolved to its shared title and promise, plus this page's proof.
+const processSteps = d.process.flatMap(({ step, proof }) => {
+  const s = PROCESS_STEPS.find((p) => p.id === step);
+  return s ? [{ ...s, proof }] : [];
+});
 const contact = contactVariant(d);
 const mailto = aboutProjectHref(d.title);
 ---
@@ -168,6 +175,9 @@ const mailto = aboutProjectHref(d.title);
         </section>
       )
     }
+
+    {/* After the body and the in-depth sections, before related writing, contact and the case nav (#160). */}
+    {processSteps.length > 0 && <Process steps={processSteps} />}
 
     {
       related.length > 0 && (

@@ -1,0 +1,60 @@
+{
+  "name": "pearse.dev scheduler errors",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "5d1c7a3e-8b42-4f69-a0d5-3e9b6c2f1a07",
+      "name": "Error trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.TELEGRAM_CHAT_ID || $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ 'Scheduler failure in ' + ($json.workflow?.name ?? 'an unknown workflow') + '\\nLast node executed: ' + ($json.execution?.lastNodeExecuted ?? $json.trigger?.error?.node?.name ?? 'unknown') + '\\nError: ' + String($json.execution?.error?.message ?? $json.trigger?.error?.message ?? 'unknown').slice(0, 500) + '\\nExecution id: ' + ($json.execution?.id ?? 'none (the trigger failed)') + '\\nExecution URL: ' + ($json.execution?.url ?? 'none') + '\\nIf it failed at Send offer, that item is marked offered: check the execution, then /reoffer <id>.' }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "9a4e2b61-7c35-4d08-b1f9-6e0d3a5c8b12",
+      "name": "Send alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        0
+      ],
+      "credentials": {
+        "telegramApi": {
+          "name": "telegram-pearse-dev"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error trigger": {
+      "main": [
+        [
+          {
+            "node": "Send alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Vienna",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all"
+  },
+  "pinData": {},
+  "tags": []
+}

@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## pearse.dev social scheduler\nSee automation/n8n/README.md in the pearse.dev repository.\n\nThe Decide and Record result nodes embed automation/n8n/select.mjs (the tested reference). Edit select.mjs first, then paste.\n\nDRY_RUN is on unless the variable is exactly `false`.\n\nBluesky and Mastodon get the short copy when BLUESKY_CREDENTIAL / MASTODON_CREDENTIAL (+ MASTODON_INSTANCE_URL) are set; otherwise they are skipped.",
+        "content": "## pearse.dev social scheduler\nSee automation/n8n/README.md in the pearse.dev repository.\n\nThe Decide and Record result nodes embed automation/n8n/select.mjs (the tested reference). Edit select.mjs first, then paste.\n\nDRY_RUN is on unless the variable is exactly `false`.\n\nBluesky and Mastodon get the short copy when BLUESKY_CREDENTIAL / MASTODON_CREDENTIAL (+ MASTODON_INSTANCE_URL) are set; otherwise they are skipped.\n\nFailed executions alert Telegram through the pearse.dev scheduler errors workflow. Select it once under Workflow settings > Error workflow: its id is instance-specific, so this export does not carry it.",
         "height": 340,
         "width": 380
       },
@@ -66,7 +66,6 @@
           "response": {
             "response": {
               "fullResponse": true,
-              "neverError": true,
               "responseFormat": "text"
             }
           },
@@ -81,6 +80,9 @@
         260,
         110
       ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
       "onError": "continueRegularOutput"
     },
     {

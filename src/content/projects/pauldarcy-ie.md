@@ -22,6 +22,17 @@ features:
 hooks:
   - The brief assumed the shop was not live yet. The audit found it already was, which changed the order of everything after it.
   - Fifty-eight findings, nine of them top priority, from an audit that changed nothing on the server.
+process:
+  - step: audit
+    proof: "A read-only audit over SSH and HTTP found fifty-eight findings, nine top priority, and is kept with the runbooks in a private repository."
+  - step: staging
+    proof: "Core, plugin and theme updates, then the hardening and SEO fixes, were validated on a staging copy before anything touched live."
+  - step: gated
+    proof: "Every step of the runbook is reversible on its own, and step zero is a fresh backup taken off the server before anything else runs."
+  - step: cutover
+    proof: "The cutover followed a written runbook of reversible steps; it is done, and the live site is on WordPress 7.1, hardened."
+  - step: written-down
+    proof: "The audit, the runbooks and the infrastructure notes live in a private repository, so the next change starts from what is true."
 visibility: private
 category: client
 clientPermission: granted

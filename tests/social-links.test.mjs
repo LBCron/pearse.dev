@@ -99,7 +99,8 @@ test('dist/.well-known/atproto-did exists only when SITE.atprotoDid is set, with
   const body = atprotoDidBody(SITE.atprotoDid);
   if (body === null) {
     assert.equal(existsSync(path), false, 'no DID file while unset');
-    assert.equal(existsSync('dist/.well-known'), false, 'no .well-known directory while unset');
+    // security.txt (#140) lives in .well-known too, so the directory exists; only the DID is absent.
+    assert.deepEqual(readdirSync('dist/.well-known'), ['security.txt'], '.well-known holds only security.txt while unset');
   } else {
     assert.equal(readFileSync(path, 'utf8'), body);
   }

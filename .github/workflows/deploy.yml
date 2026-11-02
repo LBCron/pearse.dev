@@ -20,7 +20,8 @@ jobs:
   # artifact of this run. deploy publishes that artifact: there is no second build.
   check:
     uses: ./.github/workflows/check.yml
-    secrets: inherit
+    secrets:
+      CONFIDENTIAL_PATTERNS: ${{ secrets.CONFIDENTIAL_PATTERNS }}
 
   deploy:
     needs: check

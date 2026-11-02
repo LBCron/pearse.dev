@@ -1,0 +1,148 @@
+---
+// The brief form in the home #contact section (#153). Without script it is a native GET form
+// to the bare mailto address: the browser builds `?subject=…&body=…` itself from the hidden
+// subject and the textarea, the only two named fields, so nothing else becomes a mail header.
+// With script, submit goes through the same builder as every static link (same encoding, same
+// cap) and "Copy brief" copies the plain text, for webmail and for briefs over the cap.
+// The form is in the server HTML from the start and is never hidden or revealed.
+import { ADDRESS_URI, MAX_BODY, SUBJECTS } from '../lib/mailto';
+
+const INCLUDE = ['The problem', 'The current stack', 'The timeline', 'A link, if there is one'];
+---
+
+<div class="brief">
+  <form class="brief-form" method="get" action={ADDRESS_URI} data-brief>
+    <input type="hidden" name="subject" value={SUBJECTS.brief} />
+    <label for="brief-body" class="brief-label">What do you need?</label>
+    <textarea id="brief-body" class="brief-field" name="body" rows="6" maxlength={MAX_BODY} required aria-describedby="brief-include"></textarea>
+    <div class="brief-actions">
+      <button type="submit" class="btn btn-lime">Open in mail app</button>
+      <button type="button" class="btn brief-copy" data-brief-copy>Copy brief</button>
+    </div>
+    <p class="brief-status" role="status" aria-live="polite" data-brief-status></p>
+  </form>
+  <div class="brief-include" id="brief-include" data-brief-include>
+    <h3 id="brief-include-title" class="brief-label">What to include</h3>
+    <ul class="brief-list">
+      {INCLUDE.map((item) => <li>{item}</li>)}
+    </ul>
+  </div>
+</div>
+
+<script>
+  // Processed (not is:inline) so it can import the builder, and only the builder.
+  import { buildMailto } from '../lib/mailto';
+
+  const form = document.querySelector<HTMLFormElement>('form[data-brief]');
+  const field = form?.querySelector<HTMLTextAreaElement>('textarea[name="body"]');
+  const status = form?.querySelector<HTMLElement>('[data-brief-status]');
+  const copy = form?.querySelector<HTMLButtonElement>('[data-brief-copy]');
+  const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+  const canCopy = !!clipboard && typeof clipboard.writeText === 'function';
+
+  if (form && field && status && copy) {
+    if (canCopy) form.dataset.canCopy = '';
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const mail = buildMailto('brief', field.value);
+      status.textContent = mail.truncated
+        ? canCopy
+          ? 'Too long for an email link: the email holds the first part only. Use Copy brief for the whole text.'
+          : 'Too long for an email link: the email holds the first part only. Select the text and copy it.'
+        : '';
+      window.location.href = mail.href;
+    });
+
+    copy.addEventListener('click', async () => {
+      if (!clipboard) return;
+      status.textContent = '';
+      try {
+        await clipboard.writeText(buildMailto('brief', field.value).text);
+        status.textContent = 'Brief copied, with the address and subject';
+      } catch {
+        status.textContent = 'Copy failed, select the text and copy it';
+      }
+    });
+  }
+</script>
+
+<style>
+  .brief {
+    display: grid;
+    gap: 2rem;
+    margin-top: 3rem;
+    max-width: 60rem;
+  }
+  @media (min-width: 48rem) {
+    .brief {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+      gap: 3rem;
+      align-items: start;
+    }
+  }
+  .brief-form {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+  .brief-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-paper);
+  }
+  .brief-field {
+    width: 100%;
+    min-height: 9rem;
+    padding: 0.85rem 1rem;
+    font: inherit;
+    font-size: var(--text-base);
+    line-height: 1.5;
+    color: var(--color-paper);
+    background: var(--color-ink);
+    border: 2px solid var(--color-paper);
+    border-radius: 0;
+    resize: vertical;
+  }
+  .brief-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .brief-copy {
+    visibility: hidden;
+  }
+  form[data-can-copy] .brief-copy {
+    visibility: visible;
+  }
+  .brief-status {
+    min-height: 1.5em;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: 0.06em;
+    color: var(--color-steel);
+  }
+  .brief-list {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+  }
+  .brief-list li {
+    padding: 0.6rem 0 0.6rem 1.25rem;
+    border-top: 1px solid var(--color-line);
+    position: relative;
+    color: var(--color-steel);
+  }
+  .brief-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 1.05rem;
+    width: 0.45rem;
+    height: 0.45rem;
+    background: var(--color-lime);
+  }
+</style>

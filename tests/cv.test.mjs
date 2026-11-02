@@ -94,9 +94,10 @@ test('/cv/ case studies show no role and start-only periods', () => {
 test('/cv/ mailto matches SITE.email', () => {
   const email = readFileSync('src/lib/site.ts', 'utf8').match(/email:\s*'([^']+)'/)?.[1];
   assert.ok(email);
-  const mailtos = [...html().matchAll(/href="mailto:([^"]+)"/g)].map((m) => m[1]);
+  const decode = (v) => v.replaceAll('&#38;', '&').replaceAll('&#x26;', '&').replaceAll('&amp;', '&');
+  const mailtos = [...html().matchAll(/href="(mailto:[^"]+)"/g)].map((m) => new URL(decode(m[1])));
   assert.ok(mailtos.length > 0, 'no mailto link');
-  for (const m of mailtos) assert.equal(m, email);
+  for (const m of mailtos) assert.equal(m.pathname, email);
 });
 
 test('/cv/ has a print button', () => {
@@ -229,4 +230,14 @@ test('the PDF never mentions pending client case studies', { skip: NO_CHROME }, 
     assert.equal(norm(text).includes(norm(p.title)), false, `title ${p.title}`);
     assert.equal(links.some((u) => u.includes(`/work/${p.slug}/`)), false, `link ${p.slug}`);
   }
+});
+
+// Archivo at 125% stretch wraps the name where its fallback fits on one line, so the font swap
+// pushed the contact block down (CLS 0.03 at Lighthouse's 412px, #153). The name reserves two
+// lines in those bands; the widths were measured in Chrome with and without the web font.
+test('/cv/ name reserves two lines where Archivo wraps, so the font swap shifts nothing', () => {
+  const css = [...html().matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n').replace(/\s+/g, ' ');
+  // Lightning CSS rewrites max-width/min-width as range syntax.
+  const rule = css.match(/@media screen and \(width<=33rem\),screen and \(width>=64rem\) and \(width<=88rem\)\{\.cv-name[^{]*\{min-height:1\.72em\}/);
+  assert.ok(rule, 'the reserved-height rule for .cv-name');
 });

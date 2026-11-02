@@ -266,6 +266,12 @@
   .btn-lime:hover {
     box-shadow: var(--shadow-hard-paper);
   }
+  /* Small button for inline controls such as Copy (#153): still a 24px+ target. */
+  .btn-sm {
+    min-height: 1.5rem;
+    font-size: var(--text-xs);
+    padding: 0.35em 0.75em;
+  }
 
   /* Card: 2px frame, lifts onto a lime hard shadow. */
   .card {

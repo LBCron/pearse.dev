@@ -2,6 +2,8 @@
 import { getEntry, render } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import SectionLabel from '../components/SectionLabel.astro';
+import { SITE } from '../lib/site';
+import { buildMailto } from '../lib/mailto';
 
 const entry = await getEntry('now', 'now');
 if (!entry) throw new Error('src/content/now/now.md is missing');
@@ -22,6 +24,8 @@ const label = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric',
 
     <div class="prose prose-site mt-12 md:mt-16">
       <Content />
+      {/* Closes "Open to conversations", the last section of now.md (tests/mailto.test.mjs pins the order). */}
+      <p>Write to <a href={buildMailto('now').href}>{SITE.email}</a>.</p>
     </div>
 
     <p class="mt-16 max-w-[52rem] text-sm text-steel">

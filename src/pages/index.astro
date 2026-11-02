@@ -8,10 +8,13 @@ import StackObject from '../components/StackObject.astro';
 import Timeline from '../components/Timeline.astro';
 import PostRow from '../components/PostRow.astro';
 import GitHub from '../components/GitHub.astro';
+import CopyEmail from '../components/CopyEmail.astro';
+import ContactBrief from '../components/ContactBrief.astro';
 import { INTERESTS, SITE } from '../lib/site';
 import { getPublishedPosts } from '../lib/posts';
 import { getVisibleProjects } from '../lib/projects';
 import { getGithub } from '../lib/github';
+import { ADDRESS_URI, buildMailto } from '../lib/mailto';
 
 const projects = await getVisibleProjects();
 // Six cards: featured first, then the next visible case studies by order, so hidden ones never leave a gap.
@@ -35,7 +38,7 @@ const jsonLd = {
   '@type': 'Person',
   name: 'Pearse D’Arcy',
   url: SITE.url,
-  email: `mailto:${SITE.email}`,
+  email: ADDRESS_URI,
   jobTitle: 'Software Engineer',
   address: { '@type': 'PostalAddress', addressLocality: 'Innsbruck', addressCountry: 'AT' },
   sameAs: [SITE.github, SITE.linkedin],
@@ -142,7 +145,11 @@ const jsonLd = {
     <h2 id="contact-title" class="mt-5 text-lg text-steel max-w-[44ch]">
       Interesting problem, a platform that needs one owner, or a talk about agent workflows that actually ship?
     </h2>
-    <a href={`mailto:${SITE.email}`} class="contact-mail display">{SITE.email}</a>
+    <div class="contact-address">
+      <a href={buildMailto('home').href} class="contact-mail display">{SITE.email}</a>
+      <CopyEmail />
+    </div>
+    <ContactBrief />
     <div class="mt-10 flex flex-wrap gap-3">
       <a class="btn" href={SITE.github}>GitHub</a>
       <a class="btn" href={SITE.linkedin}>LinkedIn</a>
@@ -232,9 +239,16 @@ const jsonLd = {
     color: var(--color-steel);
     line-height: 1.5;
   }
+  .contact-address {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem 1.5rem;
+    margin-top: 2rem;
+  }
   .contact-mail {
     display: inline-block;
-    margin-top: 2rem;
+    min-width: 0;
     font-size: clamp(1.75rem, 1rem + 5.2vw, 6.5rem);
     line-height: 0.95;
     text-transform: none;

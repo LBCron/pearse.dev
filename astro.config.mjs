@@ -63,7 +63,9 @@ export default defineConfig({
   site: SITE,
   trailingSlash: 'always',
   redirects: Object.fromEntries(Object.entries(MOVED_CASE_STUDIES).map(([slug, to]) => [`/work/${slug}/`, to])),
-  integrations: [sitemap(), quietRedirects],
+  // The Impressum page is noindex, so it stays out of the sitemap too (#155). Matched on the path
+  // string alone, without importing the TypeScript config; harmless while the page does not exist.
+  integrations: [sitemap({ filter: (page) => new URL(page).pathname !== '/impressum/' }), quietRedirects],
   vite: {
     plugins: [tailwindcss()],
     // three.js is one intentionally lazy chunk (~130 KB gzipped); silence the 500 KB minified warning.

@@ -26,6 +26,7 @@ hooks:
   - A PR size cap and a review budget, after a 92-file PR showed that review surface does not converge no matter how many rounds you run.
 visibility: private
 category: tool
+diagram: AgenticWorkflow
 ---
 
 Everything on this site from mid-2026 onwards was built with agents, under review. This is the harness that made that safe enough to do every day: hooks that make the dangerous commands impossible in the wrong place, a tracker that is the only coordination surface, and a review process that assumes the author is wrong until proven otherwise.

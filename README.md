@@ -135,7 +135,7 @@ To add one:
 3. Give `Diagram` a `title` and a `desc` that tells the flow in sentences, for screen readers.
 4. Add `<Name>` to `DIAGRAM_NAMES` in `src/lib/diagrams.ts` and to `DIAGRAMS` in `src/components/diagrams/index.ts`, then set `diagram: <Name>` on the case study, or on one of its `sections`.
 
-Name only components the case study already names: no hostnames, addresses, customer names or counts. The build fails when a label is too long for its box. Flow edges animate only under `prefers-reduced-motion: no-preference`. Check both layouts at 390 and 1280 px; `tests/diagrams.test.mjs` asserts which titled diagrams each case study renders.
+Name only components the case study or its linked article already names: no hostnames, addresses, customer names or counts. The build fails when a label is too long for its box. Flow edges animate only under `prefers-reduced-motion: no-preference`. Check both layouts at 390 and 1280 px; `tests/diagrams.test.mjs` asserts which titled diagrams each case study renders, and fails on any diagram text that looks like a path (a slash with no space on either side, `~/`, or a `.sh`, `.md` or `.json` name) or an MTS repo slug.
 
 ### Add a post
 

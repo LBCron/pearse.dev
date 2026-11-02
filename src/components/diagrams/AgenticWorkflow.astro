@@ -1,0 +1,98 @@
+---
+import Diagram from './Diagram.astro';
+import type { Layout } from './layout';
+
+// One path, planner to merge: planner -> tracker -> a delegate chosen by size (own worktree) ->
+// pull request -> CI -> review (prosecutor, judge) -> merge. Off the flow: hooks block writes in
+// the shared checkout, a fix round goes back to the delegates, leftovers go back to the tracker.
+// Every label comes from the case study or its linked article. No counts, paths, repo, product
+// or model names (tests/diagrams.test.mjs checks the path and repo-slug cases).
+const wide: Layout = {
+  w: 1040,
+  h: 385,
+  groups: [
+    { x: 318, y: 40, w: 200, h: 220, label: 'one git worktree each' },
+    { x: 852, y: 40, w: 176, h: 190, label: 'review budget' },
+  ],
+  nodes: [
+    { id: 'planner', x: 10, y: 121, w: 120, h: 58, kind: 'ai', label: 'Planner', sub: ['one planning', 'session'] },
+    { id: 'tracker', x: 160, y: 121, w: 130, h: 58, kind: 'store', label: 'Issue tracker', sub: ['coordination', 'claim first'] },
+    { id: 's', x: 335, y: 60, w: 166, h: 50, kind: 'ai', label: 'Size S', sub: ['cheaper model'] },
+    { id: 'm', x: 335, y: 125, w: 166, h: 50, kind: 'ai', label: 'Size M', sub: ['stronger model'] },
+    { id: 'l', x: 335, y: 190, w: 166, h: 50, kind: 'ai', label: 'Size L', sub: ['top model'] },
+    { id: 'hooks', x: 335, y: 290, w: 166, h: 50, label: 'Hook guardrails', sub: ['PreToolUse hooks'] },
+    { id: 'checkout', x: 560, y: 290, w: 150, h: 50, kind: 'store', label: 'Shared checkout', sub: ['belongs to no agent'] },
+    { id: 'pr', x: 546, y: 121, w: 124, h: 58, label: 'Pull request', sub: ['size cap'] },
+    { id: 'ci', x: 700, y: 121, w: 124, h: 58, label: 'CI', sub: ['full suite once'] },
+    { id: 'prosecutor', x: 864, y: 62, w: 152, h: 58, kind: 'ai', label: 'Prosecutor', sub: ['tries to break it'] },
+    { id: 'judge', x: 864, y: 150, w: 152, h: 58, kind: 'ai', label: 'Judge', sub: ['different, stronger', 'model'] },
+    { id: 'merge', x: 880, y: 270, w: 120, h: 48, label: 'Merge' },
+  ],
+  edges: [
+    { from: 'planner', to: 'tracker', flow: true },
+    { from: 'tracker', to: 'm', flow: true },
+    { from: 'm', to: 'pr', flow: true },
+    { from: 'pr', to: 'ci', flow: true },
+    { from: 'ci', to: 'prosecutor', toOff: 20, flow: true },
+    { from: 'prosecutor', to: 'judge', flow: true },
+    { from: 'judge', to: 'merge', flow: true },
+    { from: 'l', to: 'hooks' },
+    { from: 'hooks', to: 'checkout', label: 'blocked' },
+    { from: 'prosecutor', to: 's', fromOff: -6, label: 'fix round' },
+    { from: 'merge', to: 'tracker', fromSide: 'b', toSide: 'b', via: [[940, 365], [225, 365]], label: 'leftovers' },
+  ],
+};
+
+const narrow: Layout = {
+  w: 360,
+  h: 650,
+  groups: [
+    { x: 12, y: 104, w: 334, h: 106, label: 'one git worktree each' },
+    { x: 12, y: 430, w: 334, h: 104, label: 'review budget' },
+  ],
+  nodes: [
+    { id: 'planner', x: 22, y: 20, w: 146, h: 58, kind: 'ai', label: 'Planner', sub: ['one planning', 'session'] },
+    { id: 'tracker', x: 190, y: 20, w: 150, h: 58, kind: 'store', label: 'Issue tracker', sub: ['coordination', 'claim first'] },
+    { id: 's', x: 22, y: 134, w: 96, h: 58, kind: 'ai', label: 'Size S', sub: ['cheaper', 'model'] },
+    { id: 'm', x: 131, y: 134, w: 96, h: 58, kind: 'ai', label: 'Size M', sub: ['stronger', 'model'] },
+    { id: 'l', x: 240, y: 134, w: 96, h: 58, kind: 'ai', label: 'Size L', sub: ['top model'] },
+    { id: 'pr', x: 22, y: 250, w: 146, h: 58, label: 'Pull request', sub: ['size cap'] },
+    { id: 'hooks', x: 190, y: 250, w: 150, h: 58, label: 'Hook guardrails', sub: ['PreToolUse hooks'] },
+    { id: 'ci', x: 22, y: 340, w: 146, h: 58, label: 'CI', sub: ['full suite once'] },
+    { id: 'checkout', x: 190, y: 340, w: 150, h: 58, kind: 'store', label: 'Shared checkout', sub: ['belongs to no agent'] },
+    { id: 'prosecutor', x: 22, y: 460, w: 146, h: 58, kind: 'ai', label: 'Prosecutor', sub: ['tries to break it'] },
+    { id: 'judge', x: 190, y: 460, w: 150, h: 58, kind: 'ai', label: 'Judge', sub: ['different, stronger', 'model'] },
+    { id: 'merge', x: 190, y: 566, w: 150, h: 48, label: 'Merge' },
+  ],
+  edges: [
+    { from: 'planner', to: 'tracker', flow: true },
+    // Enter the group below its label, so the edge never crosses the label text.
+    { from: 'tracker', to: 'm', fromSide: 'b', toSide: 't', via: [[265, 120], [179, 120]], flow: true },
+    { from: 'm', to: 'pr', flow: true },
+    { from: 'pr', to: 'ci', flow: true },
+    { from: 'ci', to: 'prosecutor', fromOff: 35, toOff: 35, flow: true },
+    { from: 'prosecutor', to: 'judge', flow: true },
+    { from: 'judge', to: 'merge', flow: true },
+    { from: 'l', to: 'hooks' },
+    { from: 'hooks', to: 'checkout', label: 'blocked' },
+    { from: 'prosecutor', to: 's', fromSide: 'l', toSide: 'l', via: [[6, 489], [6, 163]], label: 'fix round', labelAt: [50, 414] },
+    {
+      from: 'merge',
+      to: 'tracker',
+      fromSide: 'b',
+      toSide: 'r',
+      via: [[265, 634], [354, 634], [354, 49]],
+      label: 'leftovers',
+      labelAt: [312, 624],
+    },
+  ],
+};
+---
+
+<Diagram
+  id="diagram-agentic-workflow"
+  title="Planner to merge"
+  desc="One planning session turns a request into an issue on the tracker, which is the only coordination surface. A delegate claims the issue first, and the size of the issue picks the delegate: small issues go to a cheaper model, medium ones to a stronger model and large ones to the top model. Each delegate works in its own git worktree. PreToolUse hook guardrails block destructive git commands and writes in the shared checkout, which belongs to no agent. The delegate opens a pull request, which has a size cap, and CI runs the full suite once. Review works to a budget: a prosecutor tries to break the pull request, and a judge on a different, stronger model rules on its findings. Findings go back to the delegate as a fix round, up to a fix-round limit. Then the pull request merges, and leftover findings go back to the tracker as new issues."
+  wide={wide}
+  narrow={narrow}
+/>
